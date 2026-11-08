@@ -1,6 +1,7 @@
 # CS2 Server Blocker for Linux
 
 [![CI](https://github.com/NasirA1991/cs2-server-blocker/actions/workflows/ci.yml/badge.svg)](https://github.com/NasirA1991/cs2-server-blocker/actions/workflows/ci.yml)
+[![AUR publish](https://github.com/NasirA1991/cs2-server-blocker/actions/workflows/aur.yml/badge.svg)](https://github.com/NasirA1991/cs2-server-blocker/actions/workflows/aur.yml)
 [![Latest release](https://img.shields.io/github/v/release/NasirA1991/cs2-server-blocker?display_name=tag)](https://github.com/NasirA1991/cs2-server-blocker/releases/latest)
 [![AUR](https://img.shields.io/aur/version/cs2blocker)](https://aur.archlinux.org/packages/cs2blocker)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -512,6 +513,16 @@ sudo rm -rf /usr/lib/cs2blocker /etc/cs2blocker /var/lib/cs2blocker /run/cs2bloc
 The uninstaller deletes only `inet cs2blocker`; it never flushes the ruleset.
 
 ---
+
+## Builds and releases
+
+Builds happen in GitHub Actions, not on the development machine.
+
+- Every push to `master` runs tests and builds the Arch package, `.deb`, `.rpm`, source tarball and checksums. Download them from the **Actions** tab artifacts.
+- Pushing a `v*` tag creates a GitHub release with all artifacts.
+- The same tag also publishes the corresponding AUR package through the **AUR** workflow using the repository's `AUR_SSH_PRIVATE_KEY` secret.
+
+A local checkout is for editing and testing only; release artifacts should come from CI.
 
 ## Development and tests
 
