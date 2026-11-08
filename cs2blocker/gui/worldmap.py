@@ -2,13 +2,14 @@
 
 No map service or image asset is needed at runtime: Natural Earth's public
 domain 1:110m land rings are checked into ``map_data.py`` and drawn with Cairo
-on a Gtk.DrawingArea.  Dots are clickable; nearby dots collapse into a bubble
-that zooms in when clicked.
+on a Gtk.DrawingArea. Dots are clickable; nearby dots collapse into a bubble
+that opens a per-POP popover when clicked.
 """
 
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass
 from typing import Callable
 
@@ -16,7 +17,7 @@ import cairo
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 from ..core.model import Mode, Region
 from .map_data import WORLD_LAND_RINGS
@@ -36,15 +37,8 @@ ALLOWED = (0.20, 0.82, 0.58)
 AMBER = (0.98, 0.72, 0.28)
 TEXT = (0.90, 0.95, 1.0)
 DIM = (0.63, 0.74, 0.82)
-REGION_ANCHORS: dict[Region, tuple[float, float]] = {
-    Region.EUROPE: (15.0, 53.0),
-    Region.NORTH_AMERICA: (-101.0, 44.0),
-    Region.SOUTH_AMERICA: (-60.0, -16.0),
-    Region.ASIA: (94.0, 33.0),
-    Region.OCEANIA: (140.0, -28.0),
-    Region.AFRICA: (19.0, 2.0),
-    Region.MIDDLE_EAST: (46.0, 25.0),
-}
+PENDING = (0.86, 0.70, 0.38)
+ACCENT = (0.48, 0.72, 0.96)
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +52,7 @@ class MapEntry:
     relays: int
     ports: str
     country: str = ""
+    city: str = ""
 
 
 @dataclass
@@ -81,6 +76,10 @@ class WorldMap(Gtk.DrawingArea):
         self.mode = Mode.BLOCK
         self.pings: dict[str, float | None] = {}
         self.counters: dict[str, int] = {}
+        self.pending: set[str] = set()
+        self.ping_cap: float | None = None
+        self._pulses: dict[str, float] = {}
+        self._pulse_tick_id = 0
         self.focus_code: str | None = None
         self.hover_code: str | None = None
         self.zoom = 1.0
@@ -123,6 +122,9 @@ class WorldMap(Gtk.DrawingArea):
         drag.connect("drag-update", self._on_drag_update)
         drag.connect("drag-end", self._on_drag_end)
         self.add_controller(drag)
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self._on_key)
+        self.add_controller(keys)
 
     # ------------------------------------------------------------------ data
     def set_data(
@@ -134,12 +136,14 @@ class WorldMap(Gtk.DrawingArea):
         pings: dict[str, float | None],
         counters: dict[str, int],
         focus: str | None = None,
+        pending: set[str] | None = None,
     ) -> None:
         self.entries = entries
         self.selected = set(selected)
         self.mode = mode
         self.pings = dict(pings)
         self.counters = dict(counters)
+        self.pending = set(pending or ())
         self.focus_code = focus
         self.queue_draw()
 
@@ -152,9 +156,32 @@ class WorldMap(Gtk.DrawingArea):
         self.pings = dict(pings)
         self.queue_draw()
 
-    def set_counters(self, counters: dict[str, int]) -> None:
-        self.counters = dict(counters)
+    def set_pending(self, pending: set[str]) -> None:
+        self.pending = set(pending)
         self.queue_draw()
+
+    def set_ping_cap(self, cap: float | None) -> None:
+        self.ping_cap = cap
+        self.queue_draw()
+
+    def set_counters(self, counters: dict[str, int]) -> None:
+        now = time.monotonic()
+        for code, value in counters.items():
+            if value > self.counters.get(code, 0) and self._is_blocked(code):
+                self._pulses[code] = now + 1.15
+        self.counters = dict(counters)
+        if self._pulses and not self._pulse_tick_id:
+            self._pulse_tick_id = GLib.timeout_add(55, self._tick_pulses)
+        self.queue_draw()
+
+    def _tick_pulses(self) -> bool:
+        now = time.monotonic()
+        self._pulses = {code: end for code, end in self._pulses.items() if end > now}
+        self.queue_draw()
+        if self._pulses:
+            return True
+        self._pulse_tick_id = 0
+        return False
 
     def set_focus(self, code: str | None) -> None:
         self.focus_code = code
@@ -232,19 +259,7 @@ class WorldMap(Gtk.DrawingArea):
         if code != self.hover_code or target is not self._hover_target:
             self.hover_code = code
             self._hover_target = target
-            if target is None:
-                self.set_tooltip_text(None)
-            elif target.cluster:
-                self.set_tooltip_text(
-                    f"{len(target.entries)} datacenters · click to zoom in"
-                )
-            else:
-                entry = target.entries[0]
-                ping = self.pings.get(entry.code)
-                ping_text = "ping …" if ping is None else f"{ping:.0f} ms"
-                self.set_tooltip_text(
-                    f"{entry.title}\n{entry.region.value} · {entry.relays} relays · {ping_text}"
-                )
+            self.set_tooltip_text(None)
             self.queue_draw()
 
     def _on_leave(self, _controller) -> None:
@@ -257,7 +272,52 @@ class WorldMap(Gtk.DrawingArea):
         self._zoom_around(self._pointer_x, self._pointer_y, factor)
         return True
 
+    def _on_key(self, _controller, keyval: int, _keycode: int, _state) -> bool:
+        if keyval in (Gdk.KEY_plus, Gdk.KEY_equal):
+            self.zoom_in()
+            return True
+        if keyval in (Gdk.KEY_minus, Gdk.KEY_underscore):
+            self.zoom_out()
+            return True
+        if keyval in (Gdk.KEY_0, Gdk.KEY_Home):
+            self.reset_view()
+            return True
+        if keyval == Gdk.KEY_Escape:
+            if self.on_focus:
+                self.on_focus(None)
+            return True
+        order = [entry for entry in self.entries if entry.code in self._visible_codes()]
+        if not order:
+            return False
+        codes = [entry.code for entry in order]
+        if self.focus_code in codes:
+            index = codes.index(self.focus_code)
+        else:
+            index = -1
+        if keyval in (Gdk.KEY_Right, Gdk.KEY_Down, Gdk.KEY_Tab):
+            index = (index + 1) % len(codes)
+        elif keyval in (Gdk.KEY_Left, Gdk.KEY_Up, Gdk.KEY_ISO_Left_Tab):
+            index = (index - 1) % len(codes)
+        elif keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space):
+            if self.focus_code and self.on_toggle:
+                self.on_toggle(self.focus_code)
+            return True
+        else:
+            return False
+        code = codes[index]
+        self.focus_code = code
+        if self.on_focus:
+            self.on_focus(code)
+        self.queue_draw()
+        return True
+
+    def _visible_codes(self) -> set[str]:
+        if not self._targets:
+            return {entry.code for entry in self.entries}
+        return {entry.code for target in self._targets for entry in target.entries}
+
     def _on_drag_begin(self, _gesture, start_x: float, start_y: float) -> None:
+        self.grab_focus()
         self._drag_start = (start_x, start_y)
         self._drag_last = (start_x, start_y)
         self._dragged = False
@@ -282,14 +342,8 @@ class WorldMap(Gtk.DrawingArea):
         if not self._dragged and self._press_target is not None:
             target = self._press_target
             if target.cluster:
-                if (
-                    len(target.entries) <= 4
-                    and self.zoom >= 2.5
-                    and self.on_cluster is not None
-                ):
+                if self.on_cluster is not None:
                     self.on_cluster(target.entries, target.x, target.y)
-                else:
-                    self._zoom_to_entries(list(target.entries))
             elif target.entries:
                 entry = target.entries[0]
                 if self.on_toggle:
@@ -362,7 +416,6 @@ class WorldMap(Gtk.DrawingArea):
         cr.paint()
         self._draw_grid(cr)
         self._draw_land(cr)
-        self._draw_region_labels(cr)
         self._draw_entries(cr)
         self._draw_empty_state(cr, width, height)
         cr.restore()
@@ -433,52 +486,6 @@ class WorldMap(Gtk.DrawingArea):
         cr.stroke()
         cr.restore()
 
-    def _draw_region_labels(self, cr: cairo.Context) -> None:
-        if self.zoom > 3.2:
-            return
-        cr.save()
-        for region, (lon, lat) in REGION_ANCHORS.items():
-            points = [entry for entry in self.entries if entry.region is region]
-            if not points:
-                continue
-            blocked = sum(1 for entry in points if self._is_blocked(entry.code))
-            allowed = len(points) - blocked
-            color = ALLOWED if blocked == 0 else (BLOCKED if blocked == len(points) else AMBER)
-            name = region.value.upper()
-            count = f"{allowed} of {len(points)} allowed"
-            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-            cr.set_font_size(10.0)
-            name_width = cr.text_extents(name).width
-            cr.set_font_size(9.0)
-            count_width = cr.text_extents(count).width
-            width = max(name_width, count_width) + 14
-            height = 30.0
-            x, y = self._project(lon, lat)
-            x0 = max(
-                self._map_rect[0] + 4,
-                min(self._map_rect[0] + self._map_rect[2] - width - 4, x - width / 2),
-            )
-            y0 = max(
-                self._map_rect[1] + 4,
-                min(self._map_rect[1] + self._map_rect[3] - height - 4, y - height / 2),
-            )
-            self._rounded_rect(cr, x0, y0, width, height, 6)
-            cr.set_source_rgba(0.015, 0.06, 0.10, 0.62)
-            cr.fill()
-            cr.set_source_rgba(*color, 0.55)
-            cr.set_line_width(0.6)
-            cr.stroke()
-            cr.set_source_rgba(0.78, 0.88, 0.94, 0.72)
-            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-            cr.set_font_size(10.0)
-            cr.move_to(x0 + 7, y0 + 12)
-            cr.show_text(name)
-            cr.set_source_rgba(*color, 0.95)
-            cr.set_font_size(9.0)
-            cr.move_to(x0 + 7, y0 + 23)
-            cr.show_text(count)
-        cr.restore()
-
     def _is_blocked(self, code: str) -> bool:
         if self.mode is Mode.BLOCK:
             return code in self.selected
@@ -492,6 +499,16 @@ class WorldMap(Gtk.DrawingArea):
             return BLOCKED
         return AMBER
 
+    @staticmethod
+    def _ping_color(ping: float | None) -> tuple[float, float, float]:
+        if ping is None:
+            return DIM
+        if ping <= 50.0:
+            return (0.30, 0.82, 0.62)
+        if ping <= 100.0:
+            return (0.92, 0.70, 0.34)
+        return (0.88, 0.40, 0.42)
+
     def _draw_entries(self, cr: cairo.Context) -> None:
         self._targets = []
         visible: list[tuple[MapEntry, float, float]] = []
@@ -500,8 +517,9 @@ class WorldMap(Gtk.DrawingArea):
             x, y = self._project(entry.lon, entry.lat)
             if x0 - 30 <= x <= x0 + w + 30 and y0 - 30 <= y <= y0 + h + 30:
                 visible.append((entry, x, y))
+
         clusters: list[list[tuple[MapEntry, float, float]]] = []
-        threshold = 24.0
+        threshold = 22.0
         for item in sorted(visible, key=lambda item: item[0].code):
             for cluster in clusters:
                 cx = sum(p[1] for p in cluster) / len(cluster)
@@ -512,101 +530,188 @@ class WorldMap(Gtk.DrawingArea):
             else:
                 clusters.append([item])
 
+        now = time.monotonic()
         for cluster in clusters:
             entries = tuple(item[0] for item in cluster)
             cx = sum(item[1] for item in cluster) / len(cluster)
             cy = sum(item[2] for item in cluster) / len(cluster)
             color = self._state_color(entries)
             is_cluster = len(entries) > 1
-            focused = any(e.code == self.focus_code for e in entries) and not is_cluster
+            focused = any(entry.code == self.focus_code for entry in entries) and not is_cluster
             hovered = self._hover_target is not None and entries[0] in self._hover_target.entries
-            radius = (11.0 + min(8.0, math.sqrt(len(entries)) * 3.0)) if is_cluster else (7.2 if focused else 5.8)
-            if hovered:
-                radius += 1.5
-            glow = cairo.RadialGradient(cx, cy, radius * 0.4, cx, cy, radius * 2.6)
-            glow.add_color_stop_rgba(0, *color, 0.30)
-            glow.add_color_stop_rgba(1, *color, 0.0)
-            cr.set_source(glow)
-            cr.arc(cx, cy, radius * 2.6, 0, 2 * math.pi)
-            cr.fill()
+            pending = any(entry.code in self.pending for entry in entries)
 
-            cr.set_source_rgb(*color)
-            cr.arc(cx, cy, radius, 0, 2 * math.pi)
-            cr.fill()
-            cr.set_source_rgba(0.95, 0.99, 1.0, 0.92 if focused or hovered else 0.55)
-            cr.set_line_width(1.2 if focused else 0.8)
-            cr.arc(cx, cy, radius - 0.6, 0, 2 * math.pi)
-            cr.stroke()
             if is_cluster:
-                cr.set_source_rgb(0.02, 0.08, 0.12)
+                radius = 9.0 + min(6.0, math.sqrt(len(entries)) * 2.0)
+                cr.set_source_rgba(0.025, 0.07, 0.10, 0.96)
+                cr.arc(cx, cy, radius, 0, 2 * math.pi)
+                cr.fill()
+                cr.set_source_rgb(*color)
+                cr.set_line_width(1.5)
+                cr.arc(cx, cy, radius, 0, 2 * math.pi)
+                cr.stroke()
+                cr.set_source_rgb(0.86, 0.92, 0.96)
                 cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-                cr.set_font_size(10.0 + min(3.0, len(entries) * 0.2))
+                cr.set_font_size(9.5 + min(2.0, len(entries) * 0.12))
                 text = str(len(entries))
                 ext = cr.text_extents(text)
                 cr.move_to(cx - ext.width / 2 - ext.x_bearing, cy - ext.height / 2 - ext.y_bearing)
                 cr.show_text(text)
-            target = _Target(cx, cy, radius, entries, is_cluster)
+                if pending:
+                    self._draw_dashed_ring(cr, cx, cy, radius + 4.0, PENDING, 1.1)
+                target = _Target(cx, cy, radius + 2, entries, True)
+                self._targets.append(target)
+                if hovered:
+                    self._draw_cluster_hint(cr, cx, cy, radius, len(entries), pending)
+                continue
+
+            entry = entries[0]
+            blocked = self._is_blocked(entry.code)
+            pending = entry.code in self.pending
+            ping = self.pings.get(entry.code)
+            base_radius = 4.7 if (focused or hovered) else 4.1
+            if hovered:
+                base_radius += 0.5
+
+            if focused or hovered:
+                glow = cairo.RadialGradient(cx, cy, base_radius, cx, cy, base_radius * 3.2)
+                glow.add_color_stop_rgba(0, *(BLOCKED if blocked else ALLOWED), 0.18)
+                glow.add_color_stop_rgba(1, *(BLOCKED if blocked else ALLOWED), 0.0)
+                cr.set_source(glow)
+                cr.arc(cx, cy, base_radius * 3.2, 0, 2 * math.pi)
+                cr.fill()
+
+            if blocked:
+                # Blocked is a hollow ring plus a slash, not a red filled dot.
+                cr.set_source_rgba(0.025, 0.07, 0.10, 0.96)
+                cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
+                cr.fill()
+                cr.set_source_rgb(*BLOCKED)
+                cr.set_line_width(1.8)
+                cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
+                cr.stroke()
+                cr.set_line_width(1.4)
+                cr.move_to(cx - base_radius * 0.62, cy + base_radius * 0.62)
+                cr.line_to(cx + base_radius * 0.62, cy - base_radius * 0.62)
+                cr.stroke()
+            else:
+                cr.set_source_rgb(*ALLOWED)
+                cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
+                cr.fill()
+                cr.set_source_rgba(0.03, 0.10, 0.09, 0.85)
+                cr.set_line_width(0.9)
+                cr.arc(cx, cy, base_radius - 0.5, 0, 2 * math.pi)
+                cr.stroke()
+
+            if ping is not None:
+                cr.set_source_rgba(*self._ping_color(ping), 0.62)
+                cr.set_line_width(1.05)
+                cr.arc(cx, cy, base_radius + 2.0, 0, 2 * math.pi)
+                cr.stroke()
+
+            if self.ping_cap is not None and ping is not None and ping <= self.ping_cap:
+                cr.set_source_rgba(*ACCENT, 0.86)
+                cr.set_line_width(1.2)
+                cr.arc(cx, cy, base_radius + 3.8, 0, 2 * math.pi)
+                cr.stroke()
+
+            if focused:
+                cr.set_source_rgba(0.92, 0.97, 1.0, 0.95)
+                cr.set_line_width(1.2)
+                cr.arc(cx, cy, base_radius + 2.8 if ping is None else base_radius + 5.2, 0, 2 * math.pi)
+                cr.stroke()
+
+            if pending:
+                self._draw_dashed_ring(cr, cx, cy, base_radius + 4.2, PENDING, 1.0)
+
+            pulse_until = self._pulses.get(entry.code)
+            if pulse_until is not None and pulse_until > now and blocked:
+                remaining = max(0.0, pulse_until - now)
+                progress = 1.0 - remaining / 1.15
+                cr.set_source_rgba(*BLOCKED, max(0.0, 0.65 * (1.0 - progress)))
+                cr.set_line_width(1.8)
+                cr.arc(cx, cy, base_radius + 3.0 + progress * 9.0, 0, 2 * math.pi)
+                cr.stroke()
+
+            target = _Target(cx, cy, max(8.0, base_radius + 4.0), entries, False)
             self._targets.append(target)
-            if focused or (hovered and not is_cluster):
-                self._draw_callout(cr, entries[0], cx, cy, radius)
+            if focused or hovered:
+                self._draw_callout(cr, entry, cx, cy, base_radius, pending)
 
-        focus = next((entry for entry in self.entries if entry.code == self.focus_code), None)
-        if focus is not None:
-            x, y = self._project(focus.lon, focus.lat)
-            if x0 - 20 <= x <= x0 + w + 20 and y0 - 20 <= y <= y0 + h + 20:
-                self._draw_ping_pill(cr, x, y + 15)
-
-    def _draw_ping_pill(self, cr: cairo.Context, x: float, y: float) -> None:
-        ping = self.pings.get(self.focus_code or "")
-        text = "ping …" if ping is None else f"{ping:.0f} ms"
+    def _draw_dashed_ring(
+        self, cr: cairo.Context, x: float, y: float, radius: float,
+        color: tuple[float, float, float], width: float,
+    ) -> None:
         cr.save()
-        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(10.5)
-        ext = cr.text_extents(text)
-        width = ext.width + 16
-        height = 20
-        x = max(self._map_rect[0] + 4, min(self._map_rect[0] + self._map_rect[2] - width - 4, x - width / 2))
-        y = min(self._map_rect[1] + self._map_rect[3] - height - 4, y)
-        self._rounded_rect(cr, x, y, width, height, 9)
-        cr.set_source_rgba(0.02, 0.07, 0.11, 0.88)
-        cr.fill()
-        cr.set_source_rgba(0.55, 0.78, 0.90, 0.35)
-        cr.set_line_width(0.8)
+        cr.set_dash([2.6, 2.6])
+        cr.set_source_rgba(*color, 0.95)
+        cr.set_line_width(width)
+        cr.arc(x, y, radius, 0, 2 * math.pi)
         cr.stroke()
-        cr.set_source_rgb(0.80, 0.92, 0.98)
-        cr.move_to(x + 8, y + 14)
+        cr.restore()
+
+    def _draw_cluster_hint(
+        self, cr: cairo.Context, x: float, y: float, radius: float,
+        count: int, pending: bool,
+    ) -> None:
+        text = f"{count} datacenters" + (" · pending" if pending else "")
+        cr.save()
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(9.5)
+        ext = cr.text_extents(text)
+        width = ext.width + 12
+        height = 18.0
+        left = max(self._map_rect[0] + 3, min(self._map_rect[0] + self._map_rect[2] - width - 3, x - width / 2))
+        top = y - radius - height - 6
+        if top < self._map_rect[1] + 3:
+            top = y + radius + 6
+        self._rounded_rect(cr, left, top, width, height, 5)
+        cr.set_source_rgba(0.015, 0.045, 0.07, 0.95)
+        cr.fill()
+        cr.set_source_rgba(0.42, 0.58, 0.70, 0.55)
+        cr.set_line_width(0.7)
+        cr.stroke()
+        cr.set_source_rgba(0.82, 0.90, 0.95, 0.95)
+        cr.move_to(left + 6, top + 12)
         cr.show_text(text)
         cr.restore()
 
-    def _draw_callout(self, cr: cairo.Context, entry: MapEntry, x: float, y: float, radius: float) -> None:
+    def _draw_callout(
+        self, cr: cairo.Context, entry: MapEntry, x: float, y: float,
+        radius: float, pending: bool,
+    ) -> None:
         blocked = self._is_blocked(entry.code)
         state = "Blocked" if blocked else "Allowed"
+        state_color = BLOCKED if blocked else ALLOWED
         ping = self.pings.get(entry.code)
         ping_text = "ping …" if ping is None else f"{ping:.0f} ms"
-        count = self.counters.get(entry.code, 0)
+        pending_text = "  ·  pending" if pending else ""
         lines = [
-            (entry.title, 14.0, True, TEXT),
-            (entry.subtitle, 10.5, False, DIM),
-            (f"{entry.region.value}  ·  {entry.relays} relays  ·  {ping_text}  ·  {count:,} drops", 9.5, False, DIM),
+            (entry.title, 12.5, True, TEXT),
+            (entry.subtitle, 9.5, False, DIM),
+            (f"{state}  ·  {ping_text}{pending_text}", 9.5, True, state_color),
         ]
         cr.save()
         cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-        cr.set_font_size(10.5)
-        width = max(238.0, cr.text_extents(lines[2][0]).width + 24)
-        height = 66.0
+        width = 178.0
+        for text, size, _bold, _color in lines:
+            cr.set_font_size(size)
+            width = max(width, cr.text_extents(text).width + 22)
+        width = min(width, 300.0)
+        height = 52.0
         x0 = x - width / 2
-        y0 = y - radius - height - 12
-        if y0 < self._map_rect[1] + 6:
-            y0 = y + radius + 12
-        x0 = max(self._map_rect[0] + 6, min(self._map_rect[0] + self._map_rect[2] - width - 6, x0))
-        y0 = max(self._map_rect[1] + 6, min(self._map_rect[1] + self._map_rect[3] - height - 6, y0))
-        self._rounded_rect(cr, x0, y0, width, height, 12)
-        cr.set_source_rgba(0.015, 0.06, 0.10, 0.94)
+        y0 = y - radius - height - 8
+        if y0 < self._map_rect[1] + 5:
+            y0 = y + radius + 8
+        x0 = max(self._map_rect[0] + 5, min(self._map_rect[0] + self._map_rect[2] - width - 5, x0))
+        y0 = max(self._map_rect[1] + 5, min(self._map_rect[1] + self._map_rect[3] - height - 5, y0))
+        self._rounded_rect(cr, x0, y0, width, height, 7)
+        cr.set_source_rgba(0.015, 0.045, 0.07, 0.96)
         cr.fill_preserve()
-        cr.set_source_rgba(0.38, 0.66, 0.80, 0.40)
-        cr.set_line_width(0.9)
+        cr.set_source_rgba(0.32, 0.46, 0.56, 0.55)
+        cr.set_line_width(0.8)
         cr.stroke()
-        ty = y0 + 20
+        ty = y0 + 16
         for text, size, bold, color in lines:
             cr.set_source_rgb(*color)
             cr.select_font_face(
@@ -615,24 +720,11 @@ class WorldMap(Gtk.DrawingArea):
                 cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
             )
             cr.set_font_size(size)
-            max_width = width - 24
-            while cr.text_extents(text).width > max_width and len(text) > 7:
+            while cr.text_extents(text).width > width - 20 and len(text) > 5:
                 text = text[:-2] + "…"
-            cr.move_to(x0 + 12, ty)
+            cr.move_to(x0 + 10, ty)
             cr.show_text(text)
-            ty += size + 7
-        pill_w = 58.0
-        pill_x = x0 + width - pill_w - 10
-        pill_y = y0 + 10
-        self._rounded_rect(cr, pill_x, pill_y, pill_w, 18, 9)
-        cr.set_source_rgba(*(BLOCKED if blocked else ALLOWED), 0.18)
-        cr.fill()
-        cr.set_source_rgb(*(BLOCKED if blocked else ALLOWED))
-        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(9.0)
-        ext = cr.text_extents(state)
-        cr.move_to(pill_x + (pill_w - ext.width) / 2, pill_y + 13)
-        cr.show_text(state)
+            ty += size + 5
         cr.restore()
 
     def _draw_empty_state(self, cr: cairo.Context, width: int, height: int) -> None:

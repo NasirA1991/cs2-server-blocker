@@ -37,46 +37,63 @@ from .worldmap import MapEntry, WorldMap
 
 INSTALLED_HELPER = Path("/usr/lib/cs2blocker/cs2blocker-helper")
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-REGION_COLORS = {
-    Region.EUROPE: "#5db7ff",
-    Region.NORTH_AMERICA: "#f4a261",
-    Region.SOUTH_AMERICA: "#f28ab2",
-    Region.ASIA: "#7ddc98",
-    Region.OCEANIA: "#f2ce5c",
-    Region.AFRICA: "#d59bf6",
-    Region.MIDDLE_EAST: "#5de0d0",
-    Region.UNKNOWN: "#aab8c2",
-}
 CSS = b"""
-.map-shell { background-color: #07131f; border-radius: 18px; }
-.map-control { min-width: 32px; min-height: 32px; padding: 0; }
-.detail-card { background-color: rgba(255,255,255,0.045); border-radius: 16px; padding: 14px; }
-.detail-title { font-size: 23px; font-weight: 800; }
-.detail-subtitle { color: #8fa7b6; }
-.detail-meta { color: #9db0bd; font-size: 11px; }
-.ping-big { font-size: 26px; font-weight: 800; color: #8bd3ff; }
-.ping-caption { color: #7f97a8; font-size: 10px; }
-.state-blocked { color: #ff6b6b; font-weight: 800; }
-.state-allowed { color: #36d399; font-weight: 800; }
-.stat-blocked { color: #ff6b6b; font-weight: 700; }
-.stat-allowed { color: #36d399; font-weight: 700; }
-.stat-relay { color: #8bd3ff; font-weight: 600; }
-.stat-dirty { color: #f6c177; font-weight: 700; }
-.region-chip { padding: 2px 10px; border-radius: 999px; }
-.region-chip-active { background-color: rgba(255,255,255,0.10); }
-.footer { color: #7f97a8; font-size: 11px; }
-.section-title { font-size: 15px; font-weight: 800; }
-.dim { color: #8fa7b6; }
+.map-shell { background-color: #08121b; border: 1px solid #22313d; border-radius: 12px; }
+.map-control { min-width: 30px; min-height: 30px; padding: 0; border-radius: 6px; }
+.map-legend { background-color: rgba(5, 13, 19, 0.78); border: 1px solid rgba(91, 122, 141, 0.28); border-radius: 6px; padding: 5px 9px; color: #b7c6d0; font-size: 11px; }
+.detail-card { background-color: #0f1821; border: 1px solid #22313d; border-radius: 10px; padding: 11px 14px; }
+.detail-title { font-size: 19px; font-weight: 600; }
+.detail-subtitle { color: #9aacb8; font-size: 12px; }
+.detail-meta { color: #8497a4; font-size: 11px; }
+.ping-big { font-size: 20px; font-weight: 600; color: #d5e5ed; }
+.ping-caption { color: #7f93a1; font-size: 10.5px; }
+.ping-label { font-size: 11px; }
+.drop-label { font-size: 11px; color: #7f93a1; }
+.state-label { font-size: 10.5px; }
+
+.ping-good { color: #43b98b; }
+.ping-fair { color: #d2a24a; }
+.ping-bad { color: #e05d5d; }
+.state-blocked { color: #e05d5d; font-weight: 600; }
+.state-allowed { color: #43b98b; font-weight: 600; }
+.stat-dirty { color: #d2a24a; font-weight: 600; }
+.region-chip { padding: 3px 9px; border-radius: 6px; background-color: rgba(255,255,255,0.035); border: 1px solid rgba(120,145,160,0.20); font-size: 11px; }
+.region-chip-active { background-color: rgba(111,168,220,0.10); border-color: rgba(111,168,220,0.34); }
+.footer { color: #8fa3b0; font-size: 11.5px; }
+.section-title { font-size: 13px; font-weight: 600; }
+.dim { color: #95a7b3; }
+.warning-line { color: #d2a24a; font-size: 11.5px; padding: 0 2px; }
+.sidebar-shell { background-color: #0c141c; border-left: 1px solid #1e2b35; }
+.sidebar-heading { font-size: 17px; font-weight: 600; }
+.column-header { color: #7d909d; font-size: 10.5px; font-weight: 600; padding: 4px 8px; border-bottom: 1px solid #1d2a34; }
+.dc-country { padding: 2px 7px; border-radius: 5px; min-height: 34px; }
+.dc-country:hover { background-color: rgba(255,255,255,0.035); }
+.dc-child { padding: 2px 7px 2px 30px; border-radius: 5px; min-height: 30px; }
+.dc-child:hover { background-color: rgba(255,255,255,0.030); }
+.code-badge { font-family: monospace; font-size: 9.5px; color: #a8bfce; background-color: rgba(140,170,190,0.10); border-radius: 3px; padding: 1px 4px; }
+.sidebar-bulk { padding: 1px 5px; font-size: 10.5px; min-height: 20px; }
+.sort-toggle:checked { background-color: rgba(111,168,220,0.14); color: #dce8ef; }
+.dc-country:focus-visible, .dc-child:focus-visible { background-color: rgba(111,168,220,0.10); outline: 1px solid rgba(111,168,220,0.55); outline-offset: -2px; }
+.latency-row { padding: 2px 0; }
+.pending-bar { background-color: #111b24; border: 1px solid #344755; border-radius: 8px; padding: 5px 7px; }
+.pending-label { color: #d8e5ed; font-size: 12px; font-weight: 600; }
+.status-pill { background-color: rgba(143,170,186,0.08); border: 1px solid #263744; border-radius: 6px; padding: 2px 9px; color: #9fb2bf; font-size: 11.5px; }
+.status-popover-title { color: #d7e5ed; font-size: 12px; font-weight: 600; }
+.status-popover-value { color: #93a7b4; font-size: 11.5px; }
+.sidebar-search { font-size: 12px; }
+.header-counts { font-size: 11.5px; }
 """
+
 
 
 @dataclass
 class CountrySidebar:
     country: str
     entries: tuple[MapEntry, ...]
-    expander: Adw.ExpanderRow
+    row: Gtk.Widget
     check: Gtk.CheckButton
-    count_label: Gtk.Label
+    count_label: Gtk.Label | None = None
+    expander: Adw.ExpanderRow | None = None
     server_checks: dict[str, Gtk.CheckButton] = field(default_factory=dict)
     server_pings: dict[str, Gtk.Label] = field(default_factory=dict)
     server_drops: dict[str, Gtk.Label] = field(default_factory=dict)
@@ -96,7 +113,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         super().__init__(application=application)
         self.set_title("CS2 Server Blocker")
         self.set_default_size(1380, 860)
-        self.set_size_request(1120, 700)
+        self.set_size_request(900, 620)
         self.smoke_test = smoke_test
         self.paths = Paths.default()
         self.config = default_config()
@@ -117,6 +134,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._state: dict[str, Any] = {}
         self._last_counters: dict[str, int] = {}
         self._ping_generation = 0
+        self._ping_outstanding = 0
         self._executor: ThreadPoolExecutor | None = None
         self._persistence_loading = False
         self._seen_refresh: str | None = None
@@ -128,6 +146,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.continent_widgets: dict[Region, ContinentSidebar] = {}
         self._updating_sidebar = False
         self._block_new_loading = False
+        self.ping_cap: float | None = 80.0
+        self.sort_by_ping = False
+        self._sidebar_toggle_sync = False
 
         self._install_css()
         self._load_data()
@@ -223,6 +244,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     relays=pop.relay_count,
                     ports=ports,
                     country=country,
+                    city=location.city,
                 )
             )
         entries.sort(key=lambda e: (REGION_ORDER.index(e.region) if e.region in REGION_ORDER else 99, e.code))
@@ -239,18 +261,25 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         header.set_title_widget(
             Adw.WindowTitle(
                 title="CS2 Server Blocker",
-                subtitle="Click a datacenter dot to block or allow it",
+                subtitle="Linux · nftables",
             )
         )
+        self.sidebar_toggle = Gtk.ToggleButton()
+        self.sidebar_toggle.set_icon_name("sidebar-show-symbolic")
+        self.sidebar_toggle.set_active(True)
+        self.sidebar_toggle.set_tooltip_text("Show or hide the datacenter panel")
+        self.sidebar_toggle.connect("toggled", self._sidebar_toggled)
+        header.pack_start(self.sidebar_toggle)
+
         self.header_refresh_button = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
         self.header_refresh_button.set_tooltip_text("Refresh the Valve relay list")
         self.header_refresh_button.connect("clicked", lambda *_: self._refresh_clicked())
         header.pack_end(self.header_refresh_button)
-        menu_button = Gtk.MenuButton()
-        menu_button.set_icon_name("open-menu-symbolic")
-        menu_button.set_tooltip_text("Settings")
-        menu_button.set_popover(self._build_settings_popover())
-        header.pack_end(menu_button)
+        self.settings_button = Gtk.MenuButton()
+        self.settings_button.set_icon_name("open-menu-symbolic")
+        self.settings_button.set_tooltip_text("Settings")
+        self.settings_button.set_popover(self._build_settings_popover())
+        header.pack_end(self.settings_button)
         root.append(header)
 
         self.banner_revealer = Gtk.Revealer()
@@ -269,14 +298,14 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.banner_revealer.set_child(banner_box)
         root.append(self.banner_revealer)
 
-        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        content.set_margin_top(12)
-        content.set_margin_bottom(12)
-        content.set_margin_start(16)
-        content.set_margin_end(16)
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        content.set_margin_top(10)
+        content.set_margin_bottom(8)
+        content.set_margin_start(14)
+        content.set_margin_end(14)
         content.set_vexpand(True)
 
-        topbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        topbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         presets_label = Gtk.Label(label="Presets")
         presets_label.add_css_class("dim")
         presets_label.add_css_class("footer")
@@ -290,17 +319,18 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.save_preset_button.set_tooltip_text("Save the current allowed/blocked state as a preset")
         self.save_preset_button.connect("clicked", lambda *_: self._save_preset())
         topbar.append(self.save_preset_button)
-
         spacer = Gtk.Box()
         spacer.set_hexpand(True)
         topbar.append(spacer)
         self.header_counts = Gtk.Label(label="0 blocked · 0 allowed")
+        self.header_counts.add_css_class("header-counts")
         self.header_counts.set_tooltip_text("Counts of datacenters, not relays.")
-        self.dirty_stat = Gtk.Label(label="Pending changes")
-        self.dirty_stat.add_css_class("stat-dirty")
-        self.dirty_stat.set_visible(False)
         topbar.append(self.header_counts)
-        topbar.append(self.dirty_stat)
+        self.unblock_button = Gtk.Button(label="Unblock all")
+        self.unblock_button.add_css_class("flat")
+        self.unblock_button.set_tooltip_text("Remove every block created by this application")
+        self.unblock_button.connect("clicked", lambda *_: self._unblock_clicked())
+        topbar.append(self.unblock_button)
         content.append(topbar)
 
         map_shell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -308,17 +338,26 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         map_shell.set_vexpand(True)
         map_shell.set_overflow(Gtk.Overflow.HIDDEN)
         self.map = WorldMap()
+        try:
+            self.map.update_property(
+                [Gtk.AccessibleProperty.LABEL],
+                ["CS2 datacenter world map. Use arrow keys to focus a datacenter, "
+                 "Enter or Space to toggle it."],
+            )
+        except Exception:
+            pass
         self.map.on_toggle = self._toggle_pop
         self.map.on_focus = self._focus_pop
         self.map.on_cluster = self._show_cluster_popover
         overlay = Gtk.Overlay()
         overlay.set_child(self.map)
         overlay.set_vexpand(True)
-        controls = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+
+        controls = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         controls.set_halign(Gtk.Align.END)
         controls.set_valign(Gtk.Align.START)
-        controls.set_margin_top(12)
-        controls.set_margin_end(12)
+        controls.set_margin_top(10)
+        controls.set_margin_end(10)
         for label, tooltip, callback in (
             ("+", "Zoom in", lambda *_: self.map.zoom_in()),
             ("−", "Zoom out", lambda *_: self.map.zoom_out()),
@@ -331,54 +370,85 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             controls.append(button)
         overlay.add_overlay(controls)
 
-        legend = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        legend = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         legend.set_halign(Gtk.Align.START)
-        legend.set_valign(Gtk.Align.END)
-        legend.set_margin_start(14)
-        legend.set_margin_bottom(12)
+        legend.set_valign(Gtk.Align.START)
+        legend.set_margin_start(10)
+        legend.set_margin_top(10)
         legend_label = Gtk.Label(xalign=0.0)
         legend_label.set_markup(
-            "<span foreground='#ff6b6b'>●</span> Blocked    "
-            "<span foreground='#36d399'>●</span> Allowed"
+            "<span foreground='#43b98b'>●</span> Allowed   "
+            "<span foreground='#e05d5d'>⊘</span> Blocked   "
+            "<span foreground='#d2a24a'>◐</span> Mixed   "
+            "<span foreground='#d2a24a'>◌</span> Pending"
         )
-        hint_label = Gtk.Label(
-            label="Click a dot to toggle · click a bubble to zoom · drag to pan",
-            xalign=0.0,
-        )
-        hint_label.add_css_class("dim")
-        hint_label.add_css_class("footer")
+        legend_label.add_css_class("map-legend")
         legend.append(legend_label)
-        legend.append(hint_label)
         overlay.add_overlay(legend)
+
+        self.pending_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.pending_bar.add_css_class("pending-bar")
+        self.pending_bar.set_halign(Gtk.Align.CENTER)
+        self.pending_bar.set_valign(Gtk.Align.END)
+        self.pending_bar.set_margin_bottom(10)
+        self.pending_bar.set_visible(False)
+        self.pending_label = Gtk.Label(label="")
+        self.pending_label.add_css_class("pending-label")
+        self.revert_button = Gtk.Button(label="Revert")
+        self.revert_button.add_css_class("flat")
+        self.revert_button.set_tooltip_text("Discard pending changes")
+        self.revert_button.connect("clicked", lambda *_: self._revert_clicked())
+        self.spinner = Gtk.Spinner()
+        self.apply_button = Gtk.Button(label="Apply")
+        self.apply_button.add_css_class("suggested-action")
+        self.apply_button.connect("clicked", lambda *_: self._apply_clicked())
+        for widget in (
+            self.pending_label,
+            self.revert_button,
+            self.spinner,
+            self.apply_button,
+        ):
+            self.pending_bar.append(widget)
+        overlay.add_overlay(self.pending_bar)
         map_shell.append(overlay)
         content.append(map_shell)
 
-        self.region_scroll = Gtk.ScrolledWindow()
-        self.region_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
-        self.region_scroll.set_min_content_height(40)
-        self.region_scroll.set_max_content_height(48)
-        self.region_scroll.set_vexpand(False)
-        self.region_chip_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self.region_scroll.set_child(self.region_chip_box)
-        content.append(self.region_scroll)
+        self.warning_label = Gtk.Label(label="", xalign=0.0, wrap=True)
+        self.warning_label.add_css_class("warning-line")
+        self.warning_label.set_visible(False)
+        content.append(self.warning_label)
 
-        detail = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
+        self.region_chip_box = Gtk.FlowBox()
+        self.region_chip_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.region_chip_box.set_row_spacing(5)
+        self.region_chip_box.set_column_spacing(5)
+        self.region_chip_box.set_max_children_per_line(10)
+        self.region_chip_box.set_halign(Gtk.Align.FILL)
+        content.append(self.region_chip_box)
+
+        detail = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         detail.add_css_class("detail-card")
+        top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         detail_left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         detail_left.set_hexpand(True)
         self.detail_title = Gtk.Label(label="Choose a datacenter", xalign=0.0)
         self.detail_title.add_css_class("detail-title")
-        self.detail_title.set_ellipsize(3)  # Pango.EllipsizeMode.END
-        self.detail_subtitle = Gtk.Label(label="Click a dot on the map or a region chip", xalign=0.0)
+        self.detail_title.set_ellipsize(3)
+        self.detail_subtitle = Gtk.Label(
+            label="Select a dot on the map or a row in the datacenter panel",
+            xalign=0.0,
+        )
         self.detail_subtitle.add_css_class("detail-subtitle")
         self.detail_subtitle.set_ellipsize(3)
-        self.detail_meta = Gtk.Label(label="", xalign=0.0)
+        self.details_expander = Gtk.Expander(label="Details")
+        self.details_expander.set_visible(False)
+        self.detail_meta = Gtk.Label(label="", xalign=0.0, wrap=True)
         self.detail_meta.add_css_class("detail-meta")
-        self.detail_meta.set_wrap(True)
+        self.details_expander.set_child(self.detail_meta)
         detail_left.append(self.detail_title)
         detail_left.append(self.detail_subtitle)
-        detail_left.append(self.detail_meta)
-        detail.append(detail_left)
+        detail_left.append(self.details_expander)
+        top.append(detail_left)
 
         ping_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         ping_box.set_valign(Gtk.Align.CENTER)
@@ -388,90 +458,92 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         ping_caption.add_css_class("ping-caption")
         ping_box.append(self.detail_ping)
         ping_box.append(ping_caption)
-        detail.append(ping_box)
+        top.append(ping_box)
 
-        drops_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        drops_box.set_valign(Gtk.Align.CENTER)
+        self.drops_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.drops_box.set_valign(Gtk.Align.CENTER)
         self.detail_drops = Gtk.Label(label="0")
         self.detail_drops.add_css_class("ping-big")
-        drops_caption = Gtk.Label(label="drops since apply")
+        drops_caption = Gtk.Label(label="drops")
         drops_caption.add_css_class("ping-caption")
-        drops_box.append(self.detail_drops)
-        drops_box.append(drops_caption)
-        detail.append(drops_box)
+        self.drops_box.append(self.detail_drops)
+        self.drops_box.append(drops_caption)
+        top.append(self.drops_box)
 
         action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         action_box.set_valign(Gtk.Align.CENTER)
-        self.detail_state = Gtk.Label(label="—")
-        self.detail_toggle = Gtk.Button(label="Block this POP")
+        self.detail_state = Gtk.Label(label="")
+        self.detail_toggle = Gtk.Button(label="Block datacenter")
         self.detail_toggle.connect("clicked", lambda *_: self._toggle_focus())
         self.detail_toggle.set_sensitive(False)
         action_box.append(self.detail_state)
         action_box.append(self.detail_toggle)
-        detail.append(action_box)
+        top.append(action_box)
+        detail.append(top)
         content.append(detail)
 
-        action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.warning_label = Gtk.Label(label="", xalign=0.0, hexpand=True, wrap=True)
-        self.warning_label.add_css_class("dim")
-        self.warning_label.add_css_class("footer")
-        self.revert_button = Gtk.Button(label="Revert")
-        self.revert_button.set_tooltip_text("Discard pending changes")
-        self.revert_button.connect("clicked", lambda *_: self._revert_clicked())
-        self.unblock_button = Gtk.Button(label="Unblock all")
-        self.unblock_button.connect("clicked", lambda *_: self._unblock_clicked())
-        self.spinner = Gtk.Spinner()
-        self.apply_button = Gtk.Button(label="Apply")
-        self.apply_button.add_css_class("suggested-action")
-        self.apply_button.connect("clicked", lambda *_: self._apply_clicked())
-        action_row.append(self.warning_label)
-        action_row.append(self.revert_button)
-        action_row.append(self.unblock_button)
-        action_row.append(self.spinner)
-        action_row.append(self.apply_button)
-        content.append(action_row)
+        status_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.status_pill = Gtk.MenuButton()
+        self.status_pill.add_css_class("status-pill")
+        self.status_pill.set_tooltip_text("Backend, relay list and persistence details")
+        self.status_label = Gtk.Label(label="Starting…")
+        self.status_pill.set_child(self.status_label)
+        self.status_pill.set_popover(self._build_status_popover())
+        status_row.append(self.status_pill)
+        content.append(status_row)
 
-        self.footer_label = Gtk.Label(label="", xalign=0.0, wrap=True)
-        self.footer_label.add_css_class("footer")
-        content.append(self.footer_label)
+        self.split_view = Adw.OverlaySplitView()
+        self.split_view.set_content(content)
+        self.split_view.set_sidebar(self._build_sidebar())
+        self.split_view.set_sidebar_position(Gtk.PackType.END)
+        self.split_view.set_show_sidebar(True)
+        self.split_view.set_min_sidebar_width(330)
+        self.split_view.set_max_sidebar_width(430)
+        self.split_view.set_sidebar_width_fraction(0.30)
+        self.split_view.connect("notify::show-sidebar", self._sidebar_visibility_changed)
+        root.append(self.split_view)
 
-        body = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-        body.set_wide_handle(True)
-        body.set_vexpand(True)
-        body.set_start_child(content)
-        body.set_end_child(self._build_sidebar())
-        body.set_position(960)
-        root.append(body)
+        breakpoint = Adw.Breakpoint.new(
+            Adw.BreakpointCondition.parse("max-width: 1120px")
+        )
+        breakpoint.add_setter(self.split_view, "collapsed", True)
+        breakpoint.add_setter(self.split_view, "show-sidebar", False)
+        self.add_breakpoint(breakpoint)
 
         self.toast_overlay = Adw.ToastOverlay()
         self.toast_overlay.set_child(root)
         self.set_content(self.toast_overlay)
 
     def _build_sidebar(self) -> Gtk.Widget:
-        shell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        shell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         shell.add_css_class("sidebar-shell")
-        shell.set_margin_top(12)
-        shell.set_margin_bottom(12)
-        shell.set_margin_start(8)
-        shell.set_margin_end(0)
-        shell.set_size_request(350, -1)
+        shell.set_margin_top(10)
+        shell.set_margin_bottom(8)
+        shell.set_margin_start(10)
+        shell.set_margin_end(10)
+        shell.set_size_request(340, -1)
+
         title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        title = Gtk.Label(label="Countries", xalign=0.0)
-        title.add_css_class("section-title")
+        title = Gtk.Label(label="Datacenters", xalign=0.0)
+        title.add_css_class("sidebar-heading")
         title.set_hexpand(True)
         self.sidebar_count_label = Gtk.Label(label="")
-        self.sidebar_count_label.add_css_class("dim")
         self.sidebar_count_label.add_css_class("footer")
         title_row.append(title)
         title_row.append(self.sidebar_count_label)
         shell.append(title_row)
 
         self.sidebar_search = Gtk.SearchEntry()
-        self.sidebar_search.set_placeholder_text("Search country, city, or POP")
+        self.sidebar_search.add_css_class("sidebar-search")
+        self.sidebar_search.set_placeholder_text("Search country, city, or code")
         self.sidebar_search.connect("search-changed", self._search_changed)
         shell.append(self.sidebar_search)
+        self.search_count_label = Gtk.Label(label="", xalign=0.0)
+        self.search_count_label.add_css_class("footer")
+        self.search_count_label.set_visible(False)
+        shell.append(self.search_count_label)
 
-        quick_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.sidebar_quick_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         allow_all = Gtk.Button(label="Allow all")
         allow_all.add_css_class("flat")
         allow_all.set_tooltip_text("Allow every known datacenter")
@@ -480,19 +552,101 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         block_all.add_css_class("flat")
         block_all.set_tooltip_text("Block every known datacenter")
         block_all.connect("clicked", lambda *_: self._block_all())
-        quick_row.append(allow_all)
-        quick_row.append(block_all)
-        self.sidebar_quick_box = quick_row
-        shell.append(quick_row)
+        self.sort_button = Gtk.ToggleButton(label="Sort: A–Z")
+        self.sort_button.add_css_class("flat")
+        self.sort_button.add_css_class("sort-toggle")
+        self.sort_button.set_tooltip_text("Sort datacenters by ping instead of name")
+        self.sort_button.connect("toggled", self._sort_toggled)
+        self.sidebar_quick_box.append(allow_all)
+        self.sidebar_quick_box.append(block_all)
+        self.sidebar_quick_box.append(self.sort_button)
+        shell.append(self.sidebar_quick_box)
+
+        cap_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        cap_row.add_css_class("latency-row")
+        cap_label = Gtk.Label(label="Allow under")
+        cap_label.add_css_class("footer")
+        self.ping_cap_scale = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 30, 150, 5
+        )
+        self.ping_cap_scale.set_draw_value(False)
+        self.ping_cap_scale.set_hexpand(True)
+        self.ping_cap_scale.set_value(self.ping_cap or 80)
+        self.ping_cap_scale.set_tooltip_text(
+            "Preview datacenters at or below this ping; Apply makes it pending"
+        )
+        self.ping_cap_scale.connect("value-changed", self._ping_cap_changed)
+        self.ping_cap_label = Gtk.Label(label=f"{int(self.ping_cap or 80)} ms", width_chars=6)
+        self.ping_cap_label.add_css_class("footer")
+        self.ping_cap_apply = Gtk.Button(label="Apply cap")
+        self.ping_cap_apply.add_css_class("flat")
+        self.ping_cap_apply.set_tooltip_text("Allow datacenters at or below the chosen ping")
+        self.ping_cap_apply.connect("clicked", lambda *_: self._apply_ping_cap())
+        cap_row.append(cap_label)
+        cap_row.append(self.ping_cap_scale)
+        cap_row.append(self.ping_cap_label)
+        cap_row.append(self.ping_cap_apply)
+        shell.append(cap_row)
+
+        column_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        column_header.add_css_class("column-header")
+        column_header.set_margin_end(38)
+        dc_header = Gtk.Label(label="Datacenter", xalign=0.0, hexpand=True)
+        state_header = Gtk.Label(label="State", xalign=1.0, width_chars=8)
+        ping_header = Gtk.Label(label="Ping", xalign=1.0, width_chars=7)
+        drops_header = Gtk.Label(label="Drops", xalign=1.0, width_chars=5)
+        column_header.append(dc_header)
+        column_header.append(state_header)
+        column_header.append(ping_header)
+        column_header.append(drops_header)
+        shell.append(column_header)
 
         self.sidebar_scroll = Gtk.ScrolledWindow()
         self.sidebar_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.sidebar_scroll.set_vexpand(True)
-        shell.append(self.sidebar_scroll)
-        placeholder = Gtk.Label(label="Loading servers…")
+        placeholder = Gtk.Label(label="Loading datacenters…")
         placeholder.add_css_class("dim")
         self.sidebar_scroll.set_child(placeholder)
+        shell.append(self.sidebar_scroll)
         return shell
+
+    def _sidebar_toggled(self, button: Gtk.ToggleButton) -> None:
+        if self._sidebar_toggle_sync:
+            return
+        self.split_view.set_show_sidebar(button.get_active())
+
+    def _sidebar_visibility_changed(self, split, _pspec) -> None:
+        self._sidebar_toggle_sync = True
+        self.sidebar_toggle.set_active(split.get_show_sidebar())
+        self._sidebar_toggle_sync = False
+
+    def _build_status_popover(self) -> Gtk.Popover:
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        title = Gtk.Label(label="Runtime status", xalign=0.0)
+        title.add_css_class("status-popover-title")
+        box.append(title)
+        self.status_backend = Gtk.Label(xalign=0.0)
+        self.status_backend.add_css_class("status-popover-value")
+        self.status_revision = Gtk.Label(xalign=0.0)
+        self.status_revision.add_css_class("status-popover-value")
+        self.status_cache = Gtk.Label(xalign=0.0)
+        self.status_cache.add_css_class("status-popover-value")
+        for label in (self.status_backend, self.status_revision, self.status_cache):
+            box.append(label)
+        note = Gtk.Label(
+            label="Only inet cs2blocker is modified.",
+            xalign=0.0,
+            wrap=True,
+        )
+        note.add_css_class("status-popover-value")
+        box.append(note)
+        popover.set_child(box)
+        return popover
 
     def _build_settings_popover(self) -> Gtk.Popover:
         popover = Gtk.Popover()
@@ -574,6 +728,20 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
     def _is_blocked(self, code: str) -> bool:
         return code in self.selected if self.mode is Mode.BLOCK else code not in self.selected
 
+    def _applied_blocked(self, code: str) -> bool:
+        return (
+            code in self.applied_selection
+            if self.applied_mode is Mode.BLOCK
+            else code not in self.applied_selection
+        )
+
+    def _pending_codes(self) -> set[str]:
+        return {
+            entry.code
+            for entry in self.entries
+            if self._is_blocked(entry.code) != self._applied_blocked(entry.code)
+        }
+
     def _set_codes_allowed(self, codes, allowed: bool) -> None:
         """Set explicit allowed/blocked state while preserving the internal mode model."""
         codes = set(codes)
@@ -594,6 +762,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._build_region_chips()
         self._update_block_new_view()
         self._loading = False
+        self.map.set_ping_cap(self.ping_cap)
         self.map.set_data(
             self.entries,
             selected=self.selected,
@@ -601,6 +770,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             pings=self.pings,
             counters=self.counters,
             focus=self.focus_code,
+            pending=self._pending_codes(),
         )
         self._rebuild_sidebar()
         self._update_stats()
@@ -645,10 +815,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             button = Gtk.Button()
             button.add_css_class("region-chip")
             button.set_valign(Gtk.Align.CENTER)
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
             dot = Gtk.Label()
-            dot.set_markup(f"<span foreground='{REGION_COLORS.get(region, '#aab8c2')}'>●</span>")
-            text = Gtk.Label(label=f"{region.value} 0/{total}")
+            dot.set_markup("<span foreground='#8fa3b0'>●</span>")
+            text = Gtk.Label(label=f"{region.value} 0 of {total} allowed")
             row.append(dot)
             row.append(text)
             button.set_child(row)
@@ -671,134 +841,83 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 button.add_css_class("region-chip-active")
             else:
                 button.remove_css_class("region-chip-active")
-            button.set_tooltip_text(f"Toggle all {region.value} datacenters")
+            all_allowed = allowed == len(codes)
+            button.set_tooltip_text(
+                f"Block all {region.value} datacenters"
+                if all_allowed
+                else f"Allow all {region.value} datacenters"
+            )
 
-    def _rebuild_sidebar(self) -> None:
-        if not hasattr(self, "sidebar_scroll"):
+    @staticmethod
+    def _ping_class(ping: float | None) -> str:
+        if ping is None:
+            return ""
+        if ping <= 50:
+            return "ping-good"
+        if ping <= 100:
+            return "ping-fair"
+        return "ping-bad"
+
+    @staticmethod
+    def _code_badge(code: str) -> Gtk.Label:
+        label = Gtk.Label(label=code)
+        label.add_css_class("code-badge")
+        return label
+
+    def _sort_toggled(self, button: Gtk.ToggleButton) -> None:
+        self.sort_by_ping = button.get_active()
+        button.set_label("Sort: ping" if self.sort_by_ping else "Sort: A–Z")
+        self._rebuild_sidebar()
+
+    def _ping_cap_changed(self, scale: Gtk.Scale) -> None:
+        self.ping_cap = scale.get_value()
+        self.ping_cap_label.set_text(f"{int(self.ping_cap)} ms")
+        if hasattr(self, "map"):
+            self.map.set_ping_cap(self.ping_cap)
+
+    def _apply_ping_cap(self) -> None:
+        if self._busy:
             return
-        query = self.search_query.casefold().strip()
-        page = Adw.PreferencesPage()
-        self.country_widgets.clear()
-        self.continent_widgets.clear()
-        any_group = False
+        cap = self.ping_cap
+        if cap is None:
+            return
+        eligible = {
+            entry.code
+            for entry in self.entries
+            if self.pings.get(entry.code) is not None
+            and self.pings[entry.code] <= cap
+        }
+        if not eligible:
+            self._toast("No ping data under the selected threshold yet")
+            return
+        self._set_codes_allowed([entry.code for entry in self.entries], False)
+        self._set_codes_allowed(eligible, True)
+        self.focus_code = next(
+            (entry.code for entry in self.entries if entry.code in eligible),
+            None,
+        )
+        self._pending_changed()
+        self._toast(f"Allow under {int(cap)} ms added as pending")
 
-        for region in REGION_ORDER:
-            region_entries = [e for e in self.entries if e.region is region]
-            if not region_entries:
-                continue
-            by_country: dict[str, list[MapEntry]] = defaultdict(list)
-            for entry in region_entries:
-                by_country[entry.country or "Unknown"].append(entry)
-            filtered: list[tuple[str, list[MapEntry]]] = []
-            for country in sorted(by_country):
-                entries = by_country[country]
-                if not query or query in country.casefold() or query in region.value.casefold():
-                    filtered.append((country, entries))
-                    continue
-                matches = [
-                    entry
-                    for entry in entries
-                    if query in entry.title.casefold()
-                    or query in entry.subtitle.casefold()
-                    or query in entry.code.casefold()
-                ]
-                if matches:
-                    filtered.append((country, matches))
-            if not filtered:
-                continue
-            any_group = True
-            group = Adw.PreferencesGroup()
-            continent_row = Adw.ActionRow(title=region.value)
-            continent_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
-            continent_check.set_tooltip_text(
-                f"Check to allow every {region.value} datacenter; uncheck to block them"
-            )
-            continent_check.connect("toggled", self._continent_toggled, region)
-            continent_count = Gtk.Label(label="")
-            continent_count.add_css_class("footer")
-            continent_count.add_css_class("dim")
-            continent_row.add_prefix(continent_check)
-            continent_row.add_suffix(continent_count)
-            except_button = Gtk.MenuButton()
-            except_button.set_icon_name("view-more-symbolic")
-            except_button.add_css_class("flat")
-            except_button.set_tooltip_text(
-                f"Block every {region.value} datacenter except one country"
-            )
-            except_button.set_popover(self._build_except_popover(region, filtered))
-            continent_row.add_suffix(except_button)
-            group.add(continent_row)
-            self.continent_widgets[region] = ContinentSidebar(
-                region=region,
-                entries=tuple(region_entries),
-                check=continent_check,
-                count_label=continent_count,
-            )
-
-            for country, country_entries in filtered:
-                expander = Adw.ExpanderRow(title=country)
-                expander.set_subtitle("")
-                country_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
-                country_check.set_tooltip_text(
-                    f"Check to allow every datacenter in {country}; uncheck to block them"
-                )
-                country_check.connect("toggled", self._country_toggled, country)
-                country_count = Gtk.Label(label="")
-                country_count.add_css_class("footer")
-                country_count.add_css_class("dim")
-                expander.add_prefix(country_check)
-                expander.add_suffix(country_count)
-                if query or len(country_entries) == 1:
-                    expander.set_expanded(True)
-                widget = CountrySidebar(
-                    country=country,
-                    entries=tuple(country_entries),
-                    expander=expander,
-                    check=country_check,
-                    count_label=country_count,
-                )
-                for entry in country_entries:
-                    row = Adw.ActionRow(
-                        title=entry.title,
-                        subtitle=f"{entry.code} · {entry.subtitle}",
-                    )
-                    row.set_activatable(True)
-                    row.connect("activated", lambda _row, code=entry.code: self._toggle_pop(code))
-                    check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
-                    check.set_tooltip_text("Check to allow this datacenter; uncheck to block it")
-                    check.connect("toggled", self._code_toggled, entry.code)
-                    state_label = Gtk.Label(label="", xalign=1.0)
-                    state_label.add_css_class("footer")
-                    ping_label = Gtk.Label(label="—", width_chars=7, xalign=1.0)
-                    ping_label.add_css_class("footer")
-                    ping_label.add_css_class("dim")
-                    drop_label = Gtk.Label(label="0", width_chars=5, xalign=1.0)
-                    drop_label.add_css_class("footer")
-                    drop_label.add_css_class("dim")
-                    row.add_prefix(check)
-                    row.add_suffix(state_label)
-                    row.add_suffix(ping_label)
-                    row.add_suffix(drop_label)
-                    expander.add_row(row)
-                    widget.server_checks[entry.code] = check
-                    widget.server_pings[entry.code] = ping_label
-                    widget.server_drops[entry.code] = drop_label
-                    widget.server_states[entry.code] = state_label
-                group.add(expander)
-                self.country_widgets[country] = widget
-            page.add(group)
-
-        if not any_group:
-            group = Adw.PreferencesGroup()
-            row = Adw.ActionRow(
-                title="No matching datacenters",
-                subtitle="Try a country, city, or POP code.",
-            )
-            group.add(row)
-            page.add(group)
-        self.sidebar_page = page
-        self.sidebar_scroll.set_child(page)
-        self._update_sidebar_selection()
+    def _open_except_menu(
+        self,
+        gesture: Gtk.GestureClick,
+        _n_press: int,
+        x: float,
+        y: float,
+        region: Region,
+        countries: list[tuple[str, list[MapEntry]]],
+    ) -> None:
+        row = gesture.get_widget()
+        popover = self._build_except_popover(region, countries)
+        popover.set_parent(row)
+        try:
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+            popover.set_pointing_to(rect)
+        except Exception:
+            pass
+        popover.popup()
 
     def _build_except_popover(
         self, region: Region, countries: list[tuple[str, list[MapEntry]]]
@@ -814,10 +933,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         outer.append(title)
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_min_content_height(180)
-        scrolled.set_max_content_height(320)
+        scrolled.set_min_content_height(150)
+        scrolled.set_max_content_height(300)
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        for country, entries in sorted(countries, key=lambda item: item[0]):
+        for country, _entries in sorted(countries, key=lambda item: item[0]):
             button = Gtk.Button(label=country)
             button.add_css_class("flat")
             button.set_halign(Gtk.Align.FILL)
@@ -850,6 +969,231 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.map.zoom_to_region(region)
         self._pending_changed()
 
+    def _set_region_allowed(self, region: Region, allowed: bool) -> None:
+        codes = [entry.code for entry in self.entries if entry.region is region]
+        self._set_codes_allowed(codes, allowed)
+        self._pending_changed()
+
+    def _rebuild_sidebar(self) -> None:
+        if not hasattr(self, "sidebar_scroll"):
+            return
+        query = self.search_query.casefold().strip()
+        page = Adw.PreferencesPage()
+        self.country_widgets.clear()
+        self.continent_widgets.clear()
+        any_group = False
+
+        for region in REGION_ORDER:
+            region_entries = [entry for entry in self.entries if entry.region is region]
+            if not region_entries:
+                continue
+            by_country: dict[str, list[MapEntry]] = defaultdict(list)
+            for entry in region_entries:
+                by_country[entry.country or "Unknown"].append(entry)
+            filtered: list[tuple[str, list[MapEntry]]] = []
+            for country in sorted(by_country):
+                entries = by_country[country]
+                if not query or query in country.casefold() or query in region.value.casefold():
+                    filtered.append((country, entries))
+                    continue
+                matches = [
+                    entry
+                    for entry in entries
+                    if query in entry.title.casefold()
+                    or query in entry.subtitle.casefold()
+                    or query in entry.code.casefold()
+                ]
+                if matches:
+                    filtered.append((country, matches))
+            if not filtered:
+                continue
+
+            def ping_key(item: tuple[str, list[MapEntry]]) -> tuple[float, str]:
+                pings = [
+                    self.pings.get(entry.code)
+                    for entry in item[1]
+                    if self.pings.get(entry.code) is not None
+                ]
+                best = min(pings) if pings else float("inf")
+                return (best, item[0].casefold())
+
+            if self.sort_by_ping:
+                filtered.sort(key=ping_key)
+            else:
+                filtered.sort(key=lambda item: item[0].casefold())
+
+            any_group = True
+            group = Adw.PreferencesGroup()
+            continent_row = Adw.ActionRow(title=region.value)
+            continent_row.add_css_class("dc-continent")
+            continent_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            continent_check.set_tooltip_text(
+                f"Check to allow every {region.value} datacenter; uncheck to block them"
+            )
+            continent_check.connect("toggled", self._continent_toggled, region)
+            continent_count = Gtk.Label(label="")
+            continent_count.add_css_class("footer")
+            allow_button = Gtk.Button(label="Allow all")
+            allow_button.add_css_class("sidebar-bulk")
+            allow_button.add_css_class("flat")
+            allow_button.set_tooltip_text(f"Allow every {region.value} datacenter")
+            allow_button.connect("clicked", lambda _b, r=region: self._set_region_allowed(r, True))
+            block_button = Gtk.Button(label="Block all")
+            block_button.add_css_class("sidebar-bulk")
+            block_button.add_css_class("flat")
+            block_button.set_tooltip_text(f"Block every {region.value} datacenter")
+            block_button.connect("clicked", lambda _b, r=region: self._set_region_allowed(r, False))
+            continent_row.add_prefix(continent_check)
+            continent_row.add_suffix(continent_count)
+            continent_row.add_suffix(allow_button)
+            continent_row.add_suffix(block_button)
+            continent_row.set_tooltip_text(
+                "Right-click for Block all except…"
+            )
+            except_click = Gtk.GestureClick()
+            except_click.set_button(3)
+            except_click.connect(
+                "pressed", self._open_except_menu, region, filtered
+            )
+            continent_row.add_controller(except_click)
+            group.add(continent_row)
+            self.continent_widgets[region] = ContinentSidebar(
+                region=region,
+                entries=tuple(region_entries),
+                check=continent_check,
+                count_label=continent_count,
+            )
+
+            for country, country_entries in filtered:
+                if self.sort_by_ping:
+                    country_entries.sort(
+                        key=lambda entry: (
+                            self.pings.get(entry.code) is None,
+                            self.pings.get(entry.code) or 9999,
+                            entry.city,
+                        )
+                    )
+                else:
+                    country_entries.sort(key=lambda entry: entry.city.casefold())
+
+                if len(country_entries) == 1:
+                    entry = country_entries[0]
+                    row = Adw.ActionRow(
+                        title=entry.city or entry.title,
+                        subtitle=entry.country,
+                    )
+                    row.add_css_class("dc-country")
+                    row.set_activatable(True)
+                    row.set_focusable(True)
+                    row.connect("activated", lambda _r, code=entry.code: self._toggle_pop(code))
+                    check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                    check.set_tooltip_text("Check to allow this datacenter; uncheck to block it")
+                    check.connect("toggled", self._code_toggled, entry.code)
+                    state_label = Gtk.Label(label="", xalign=1.0, width_chars=8)
+                    state_label.add_css_class("state-label")
+                    ping_label = Gtk.Label(label="—", width_chars=7, xalign=1.0)
+                    ping_label.add_css_class("ping-label")
+                    drop_label = Gtk.Label(label="", width_chars=5, xalign=1.0)
+                    drop_label.add_css_class("drop-label")
+                    row.add_prefix(self._code_badge(entry.code))
+                    row.add_prefix(check)
+                    row.add_suffix(state_label)
+                    row.add_suffix(ping_label)
+                    row.add_suffix(drop_label)
+                    group.add(row)
+                    widget = CountrySidebar(
+                        country=country,
+                        entries=(entry,),
+                        row=row,
+                        check=check,
+                        count_label=None,
+                        expander=None,
+                    )
+                    widget.server_checks[entry.code] = check
+                    widget.server_pings[entry.code] = ping_label
+                    widget.server_drops[entry.code] = drop_label
+                    widget.server_states[entry.code] = state_label
+                    self.country_widgets[country] = widget
+                    continue
+
+                expander = Adw.ExpanderRow(title=country)
+                expander.add_css_class("dc-country")
+                expander.set_focusable(True)
+                expander.set_subtitle("")
+                country_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                country_check.set_tooltip_text(
+                    f"Check to allow every datacenter in {country}; uncheck to block them"
+                )
+                country_check.connect("toggled", self._country_toggled, country)
+                country_count = Gtk.Label(label="")
+                country_count.add_css_class("footer")
+                expander.add_prefix(country_check)
+                expander.add_suffix(country_count)
+                if query:
+                    expander.set_expanded(True)
+                widget = CountrySidebar(
+                    country=country,
+                    entries=tuple(country_entries),
+                    row=expander,
+                    check=country_check,
+                    count_label=country_count,
+                    expander=expander,
+                )
+                for entry in country_entries:
+                    row = Adw.ActionRow(
+                        title=entry.city or entry.title,
+                        subtitle="",
+                    )
+                    row.add_css_class("dc-child")
+                    row.set_activatable(True)
+                    row.connect("activated", lambda _row, code=entry.code: self._toggle_pop(code))
+                    row.set_focusable(True)
+                    check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                    check.set_tooltip_text("Check to allow this datacenter; uncheck to block it")
+                    check.connect("toggled", self._code_toggled, entry.code)
+                    state_label = Gtk.Label(label="", xalign=1.0, width_chars=8)
+                    state_label.add_css_class("state-label")
+                    ping_label = Gtk.Label(label="—", width_chars=7, xalign=1.0)
+                    ping_label.add_css_class("ping-label")
+                    drop_label = Gtk.Label(label="", width_chars=5, xalign=1.0)
+                    drop_label.add_css_class("drop-label")
+                    row.add_prefix(self._code_badge(entry.code))
+                    row.add_prefix(check)
+                    row.add_suffix(state_label)
+                    row.add_suffix(ping_label)
+                    row.add_suffix(drop_label)
+                    expander.add_row(row)
+                    widget.server_checks[entry.code] = check
+                    widget.server_pings[entry.code] = ping_label
+                    widget.server_drops[entry.code] = drop_label
+                    widget.server_states[entry.code] = state_label
+                group.add(expander)
+                self.country_widgets[country] = widget
+            page.add(group)
+
+        if not any_group:
+            group = Adw.PreferencesGroup()
+            row = Adw.ActionRow(
+                title="No matching datacenters",
+                subtitle="Try a country, city, or POP code.",
+            )
+            group.add(row)
+            page.add(group)
+        self.sidebar_page = page
+        self.sidebar_scroll.set_child(page)
+        if query:
+            matched = sum(
+                len(entries)
+                for group in (self.country_widgets.values())
+                for entries in [group.entries]
+            )
+            self.search_count_label.set_text(f"{matched} matching datacenters")
+            self.search_count_label.set_visible(True)
+        else:
+            self.search_count_label.set_text("")
+            self.search_count_label.set_visible(False)
+        self._update_sidebar_selection()
+
     def _update_sidebar_selection(self) -> None:
         if self._updating_sidebar or self.sidebar_page is None:
             return
@@ -867,13 +1211,15 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     if allowed == total and total > 0
                     else ("#ff6b6b" if allowed == 0 else "#f6c177")
                 )
-                widget.count_label.set_markup(
-                    f"<span foreground='{color}'>{allowed} of {total} allowed</span>"
-                )
-                widget.count_label.set_tooltip_text(
-                    f"{allowed} of {total} datacenters allowed"
-                )
-                widget.expander.set_subtitle("")
+                if widget.count_label is not None:
+                    widget.count_label.set_markup(
+                        f"<span foreground='{color}'>{allowed} of {total} allowed</span>"
+                    )
+                    widget.count_label.set_tooltip_text(
+                        f"{allowed} of {total} datacenters allowed"
+                    )
+                if widget.expander is not None:
+                    widget.expander.set_subtitle("")
                 for code, check in widget.server_checks.items():
                     blocked = self._is_blocked(code)
                     check.set_active(not blocked)
@@ -886,10 +1232,15 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                             "state-blocked" if blocked else "state-allowed"
                         )
                     ping = self.pings.get(code)
-                    widget.server_pings[code].set_text(
-                        "—" if ping is None else f"{ping:.0f} ms"
-                    )
-                    widget.server_drops[code].set_text(str(self.counters.get(code, 0)))
+                    ping_label = widget.server_pings[code]
+                    ping_label.set_text("—" if ping is None else f"{ping:.0f} ms")
+                    for cls in ("ping-good", "ping-fair", "ping-bad"):
+                        ping_label.remove_css_class(cls)
+                    ping_class = self._ping_class(ping)
+                    if ping_class:
+                        ping_label.add_css_class(ping_class)
+                    drops = self.counters.get(code, 0)
+                    widget.server_drops[code].set_text(str(drops) if drops > 0 else "")
             for widget in self.continent_widgets.values():
                 total = len(widget.entries)
                 allowed = sum(
@@ -967,30 +1318,41 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             f"<span foreground='#ff6b6b'><b>{len(blocked)}</b> blocked</span>"
             f" · <span foreground='#36d399'><b>{len(allowed)}</b> allowed</span>"
         )
-        self.dirty_stat.set_visible(self._dirty())
         self._update_region_chips()
+        self._update_pending_bar()
 
     def _update_detail(self) -> None:
         entry = self.entry_by_code.get(self.focus_code or "")
         if entry is None:
             self.detail_title.set_text("Choose a datacenter")
-            self.detail_subtitle.set_text("Click a dot on the map or a region chip")
+            self.detail_subtitle.set_text("Select a dot or a row in the datacenter panel")
             self.detail_meta.set_text("")
+            self.details_expander.set_visible(False)
             self.detail_ping.set_text("—")
+            for cls in ("ping-good", "ping-fair", "ping-bad"):
+                self.detail_ping.remove_css_class(cls)
             self.detail_drops.set_text("—")
+            self.drops_box.set_visible(False)
             self.detail_state.set_text("")
             self.detail_toggle.set_label("Block datacenter")
             self.detail_toggle.set_sensitive(False)
             return
         blocked = self._is_blocked(entry.code)
         self.detail_title.set_text(entry.title)
-        self.detail_subtitle.set_text(f"{entry.subtitle}  ·  {entry.code}")
+        self.detail_subtitle.set_text(f"{entry.country}  ·  {entry.code}")
         self.detail_meta.set_text(
             f"{entry.region.value}  ·  {entry.relays} relays  ·  UDP {entry.ports}"
         )
+        self.details_expander.set_visible(True)
         ping = self.pings.get(entry.code)
         self.detail_ping.set_text("—" if ping is None else f"{ping:.0f} ms")
+        for cls in ("ping-good", "ping-fair", "ping-bad"):
+            self.detail_ping.remove_css_class(cls)
+        ping_class = self._ping_class(ping)
+        if ping_class:
+            self.detail_ping.add_css_class(ping_class)
         self.detail_drops.set_text(f"{self.counters.get(entry.code, 0):,}")
+        self.drops_box.set_visible(blocked)
         self.detail_state.set_text("BLOCKED" if blocked else "ALLOWED")
         self.detail_state.remove_css_class("state-blocked")
         self.detail_state.remove_css_class("state-allowed")
@@ -1042,46 +1404,57 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             text = f"{low} {text}".strip()
         if text:
             self.warning_label.set_text(text)
+            self.warning_label.set_visible(True)
         else:
-            self.warning_label.set_text(
-                "Click a datacenter dot to toggle it, then press Apply. "
-                "Ping uses ICMP; packet drops are shown per datacenter."
-            )
+            self.warning_label.set_text("")
+            self.warning_label.set_visible(False)
 
     def _update_buttons(self) -> None:
         installed = self._installed()
-        dirty = self._dirty()
         for button in (
             self.header_refresh_button,
             self.preset_dropdown,
             self.save_preset_button,
-            self.revert_button,
             self.unblock_button,
             self.menu_refresh_button,
             self.menu_ping_button,
         ):
             button.set_sensitive(installed and not self._busy)
-        self.revert_button.set_sensitive(installed and dirty and not self._busy)
-        self.apply_button.set_sensitive(installed and dirty and not self._busy)
-        self.apply_button.set_label("Apply changes" if dirty else "Applied")
-        self.apply_button.set_tooltip_text(
-            "Apply these changes through the privileged helper"
-            if dirty
-            else "No pending changes"
-        )
         self.detail_toggle.set_sensitive(
             installed and not self._busy and self.focus_code in self.entry_by_code
         )
-        self.dirty_stat.set_visible(dirty)
         for button, _label, _dot in self._region_chips.values():
             button.set_sensitive(not self._busy)
         self.map.set_sensitive(not self._busy)
         self.sidebar_search.set_sensitive(not self._busy)
         self.sidebar_quick_box.set_sensitive(not self._busy)
+        self.ping_cap_scale.set_sensitive(not self._busy)
+        self.ping_cap_apply.set_sensitive(not self._busy)
         if self.sidebar_page is not None:
             self.sidebar_page.set_sensitive(not self._busy)
         self.persistence_switch.set_sensitive(installed and not self._busy)
         self.block_new_switch.set_sensitive(not self._busy)
+        self._update_pending_bar()
+
+    def _update_pending_bar(self) -> None:
+        if not hasattr(self, "pending_bar"):
+            return
+        dirty = self._dirty()
+        pending = len(self._pending_codes())
+        self.pending_bar.set_visible(dirty or self._busy)
+        self.spinner.set_visible(self._busy)
+        if self._busy:
+            self.pending_label.set_text("Applying…")
+        elif pending:
+            self.pending_label.set_text(f"{pending} pending")
+        elif dirty:
+            self.pending_label.set_text("New-POP policy pending")
+        else:
+            self.pending_label.set_text("")
+        installed = self._installed()
+        self.apply_button.set_sensitive(installed and dirty and not self._busy)
+        self.apply_button.set_label("Apply")
+        self.revert_button.set_sensitive(installed and dirty and not self._busy)
 
     # --------------------------------------------------------------- actions
     def _toggle_pop(self, code: str) -> None:
@@ -1119,7 +1492,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             text.set_hexpand(True)
             city = Gtk.Label(label=entry.title, xalign=0.0)
             city.add_css_class("section-title")
-            sub = Gtk.Label(label=entry.subtitle, xalign=0.0)
+            ping = self.pings.get(entry.code)
+            ping_text = "ping …" if ping is None else f"{ping:.0f} ms"
+            sub = Gtk.Label(
+                label=f"{entry.code} · {ping_text} · {entry.subtitle}",
+                xalign=0.0,
+            )
             sub.add_css_class("dim")
             sub.add_css_class("footer")
             text.append(city)
@@ -1163,6 +1541,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
     def _pending_changed(self) -> None:
         self.map.set_selection(self.selected, self.mode)
+        self.map.set_pending(self._pending_codes())
         self.map.set_focus(self.focus_code)
         self._update_stats()
         self._update_sidebar_selection()
@@ -1245,6 +1624,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         if code == 0:
             self.applied_mode = self.mode
             self.applied_selection = set(self.selected)
+            self.map.set_pending(self._pending_codes())
             self._update_stats()
             self._update_buttons()
             self._update_status_view()
@@ -1260,6 +1640,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.selected = set(self.applied_selection)
         self._update_block_new_view()
         self.map.set_selection(self.selected, self.mode)
+        self.map.set_pending(self._pending_codes())
         self._update_stats()
         self._update_sidebar_selection()
         self._update_detail()
@@ -1291,6 +1672,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 pings=self.pings,
                 counters=self.counters,
                 focus=None,
+                pending=set(),
             )
             self._pending_changed()
             self._update_status_view()
@@ -1381,6 +1763,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self._executor = ThreadPoolExecutor(max_workers=16)
         self._ping_generation += 1
         generation = self._ping_generation
+        self._ping_outstanding = sum(
+            1
+            for entry in self.entries
+            if entry.code in self.snapshot.pops
+            and pop_ping_target(self.snapshot.pops[entry.code].relays) is not None
+        )
         for entry in self.entries:
             pop = self.snapshot.pops.get(entry.code)
             target = pop_ping_target(pop.relays) if pop else None
@@ -1404,7 +1792,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         except Exception:
             self.pings[code] = None
         self.map.set_pings(self.pings)
+        self._ping_outstanding = max(0, self._ping_outstanding - 1)
         self._update_sidebar_selection()
+        if self._ping_outstanding == 0 and self.sort_by_ping:
+            self._rebuild_sidebar()
         if code == self.focus_code:
             self._update_detail()
         return False
@@ -1461,21 +1852,24 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         if self.focus_code:
             self._update_detail()
         cache = state.get("cache") or {}
-        cache_text = ""
-        if cache:
-            cache_text = (
-                f"relay list revision {cache.get('revision', '?')}, "
-                f"{cache.get('origin', '?')}, {cache.get('age_human', '?')}"
-            )
-        persistence = "on" if self._unit_enabled() else "off"
-        rules_text = (
-            f"{len(live.get('blocked') or state.get('blocked') or [])} POPs blocked"
-            if active
-            else "rules inactive"
+        enabled = self._unit_enabled()
+        blocked_count = len(live.get("blocked") or state.get("blocked") or [])
+        if not self._installed():
+            status = "Not installed"
+        elif active:
+            status = f"Active · {blocked_count} blocked"
+        else:
+            status = "Inactive"
+        status += " · starts at boot" if enabled else " · boot off"
+        if cache.get("age_human"):
+            status += f" · relay list updated {cache['age_human']}"
+        self.status_label.set_text(status)
+        self.status_backend.set_text(f"Backend: {backend}")
+        self.status_revision.set_text(
+            f"Relay revision: {cache.get('revision', 'unknown')}"
         )
-        self.footer_label.set_text(
-            f"Rules: {rules_text}  ·  backend {backend}  ·  {cache_text}  ·  "
-            f"boot persistence {persistence}  ·  only inet cs2blocker is modified"
+        self.status_cache.set_text(
+            f"Relay list: {cache.get('origin', 'unknown')} · {cache.get('age_human', 'unknown')}"
         )
         self._update_persistence_view()
         self._update_banner()
@@ -1547,7 +1941,6 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._busy = True
         self.spinner.start()
         self._update_buttons()
-        self.footer_label.set_text("Working…")
 
         def worker() -> None:
             result = self._privileged_call(args)

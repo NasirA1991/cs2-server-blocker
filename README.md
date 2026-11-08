@@ -26,13 +26,16 @@ state and ping:
 ## Features
 
 - GUI (GTK4/libadwaita): an interactive world map with one dot per POP and a
-  **Countries** sidebar. Click a dot to block/allow it, click a cluster to zoom
-  in or list its cities, drag to pan and scroll to zoom. A detail card shows
-  city, country, region, relay/port data, live ICMP ping and per-POP drop
-  counters. The sidebar has search, continent/country checkboxes, per-country
-  server expansion, and a **Block all except…** action per continent. Region chips
-  also toggle a whole region. Presets set the allowed/blocked state, and Apply
-  commits it through the helper.
+  dense **Datacenters** sidebar. Blocked POPs are hollow red rings with a slash;
+  allowed POPs are solid green dots; mixed clusters are neutral bubbles. Click a
+  dot to block/allow it, click a cluster to open its POP list, drag to pan and
+  scroll to zoom. Hover shows a compact callout. A compact inspector shows city,
+  country, status, latency and drops, with relays/ports behind **Details**.
+  The sidebar has search, latency-cap bulk selection, sort by ping, continent
+  and country bulk controls, and per-POP toggles. Pending map changes get dashed
+  rings and a floating Apply/Revert bar. Region chips wrap and the right panel
+  collapses automatically on narrow windows. Presets set the allowed/blocked
+  state, and Apply commits it through the helper.
 - CLI (`cs2blockctl`): `list`, `status`, `block`, `unblock`, `only`, `preset`,
   `refresh`, `apply`, `clear`, `ping`, `counters`, `doctor`.
 - Explicit **Allowed / Blocked** state per datacenter. Checked means allowed.
@@ -47,6 +50,9 @@ state and ping:
 - Root-owned SDR cache and config. The GUI never runs as root; privileged work
   goes through a small helper via a polkit action (`auth_admin_keep`) or
   `sudo` on systems without a polkit agent.
+- Keyboard support for the map and datacenter rows; a status pill exposes
+  backend, relay revision and boot state without cluttering the workspace.
+- Requires libadwaita 1.4+ for the responsive `Adw.OverlaySplitView`.
 - Fail-safe: a failed fetch keeps the last good list; a failed apply leaves the
   previous table untouched because the whole ruleset is one `nft -f`
   transaction after an `nft -c` check.
@@ -61,7 +67,7 @@ state and ping:
 - Python 3.11+.
 - systemd for boot persistence and the weekly refresh (the helper/CLI/GUI still
   work without it; see [Non-systemd systems](#non-systemd-systems)).
-- GTK4 + libadwaita + PyGObject for the GUI.
+- GTK4 + libadwaita 1.4+ + PyGObject for the GUI (the responsive split view uses libadwaita 1.4).
 - polkit (`pkexec`) and an authentication agent for GUI/CLI elevation. On
   minimal window managers without an agent, use the CLI with `sudo`.
 
@@ -191,18 +197,22 @@ GUI:
 cs2blocker-gui
 ```
 
-Click datacenter dots (or a region chip, or a country in the sidebar), then
+Click datacenter dots (or a region chip, or a row in the Datacenters panel), then
 press **Apply**. The first Apply prompts through polkit. The map shows blocked
-POPs in red and allowed POPs in green. Checkboxes and row labels use the same
-allowed/blocked state everywhere. Scroll to zoom, drag to pan, and click a
-counted cluster to zoom into that area. Hovering a dot shows its city/country; clicking it opens
-the detail card with ping, relay count, ports and drops.
+POPs as hollow red rings, allowed POPs as green dots, mixed clusters as amber
+bubbles, and pending changes with dashed rings. Scroll to zoom, drag to pan and
+use the map controls. Clicking a cluster opens its POP list rather than zooming.
+Selecting a dot shows the inspector; technical relay/port data is under
+**Details**.
 
-The right-hand **Countries** panel groups POPs by continent and country. Use the
-search box for a country, city, or POP code. Click a country's checkbox to
-toggle every server in it, expand the row to control individual servers, or use
-the continent's **⋮** menu to block every POP except one country. The map and
-sidebar stay in sync.
+The right-hand **Datacenters** panel groups POPs by continent and country. Use
+the search box for a country, city, or POP code. Country rows merge single-POP
+countries into one row; multi-POP countries expand to city rows with code
+badges. Sort by name or ping, hide zero-drop rows automatically, and use the
+visible **Allow all / Block all** buttons per continent. Right-click a continent
+header for **Block all except…**. The latency-cap slider previews matching dots
+and **Apply cap** turns them into pending work. The map and sidebar stay in
+sync.
 
 Some cities have a Valve POP and a partner/Datapacket POP (for example `lhr`
 and `dlhr` in London). They are separate entries because they use different
@@ -211,10 +221,11 @@ Valve's partner feed sometimes publishes those coordinates as
 `(latitude, longitude)` instead of `(longitude, latitude)`; the GUI normalizes
 the pair against the other POPs in the same country before drawing it.
 
-The status banner shows whether rules are active, where the relay list came
-from, and whether boot persistence is enabled. Per-POP drop counters update
-every two seconds while the monitor is running. The **Settings** menu contains
-boot persistence and a manual refresh.
+A single status pill shows whether rules are active, the applied blocked count,
+boot persistence and relay-list age. Click it for backend, relay revision and the
+firewall-table note. A relay-list change produces an in-app toast. Per-POP drop
+counters update every two seconds while the monitor is running. The
+**Settings** menu contains boot persistence and a manual refresh.
 
 CLI examples:
 

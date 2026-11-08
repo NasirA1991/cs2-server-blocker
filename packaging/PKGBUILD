@@ -1,12 +1,12 @@
 # Maintainer: CS2 Server Blocker contributors
 pkgname=cs2blocker
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Block CS2 matchmaking datacenters with persistent nftables rules"
 arch=('any')
-url="https://github.com/cs2blocker/cs2blocker"
+url="https://github.com/NasirA1991/cs2-server-blocker"
 license=('MIT')
-depends=('python' 'nftables' 'polkit' 'systemd' 'python-gobject' 'python-cairo' 'gtk4' 'libadwaita')
+depends=('python' 'nftables' 'polkit' 'systemd' 'python-gobject' 'python-cairo' 'gtk4' 'libadwaita>=1.4')
 optdepends=('ipset: iptables/ipset fallback when nftables is unavailable')
 makedepends=('git')
 _repo_root=$(realpath "$startdir/..")

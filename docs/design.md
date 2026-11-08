@@ -312,17 +312,19 @@ libadwaita 1.10, PyGObject 3.58), is native on GNOME, Wayland-native, and needs 
 platform-theme plugins. Trade-off: on KDE it uses Adwaita, not Breeze.
 
 The primary view is a locally drawn equirectangular world map (Cairo, Natural Earth
-1:110m public-domain land rings). Each POP with relay endpoints is a clickable dot;
-nearby dots cluster into a counted bubble that zooms in when clicked. Scroll zooms,
-drag pans, region chips toggle a whole region, and the detail card shows city/country,
-region, relay count, port range, live ICMP ping and per-POP drops. The map uses red for
-blocked, green for allowed, and amber for mixed clusters. No online tiles are used.
+1:110m public-domain land rings). Each POP with relay endpoints is a clickable dot.
+Nearby dots cluster into a counted bubble; clicking it opens the POP list instead of
+zooming. Blocked POPs are hollow rings with a slash, allowed POPs are solid, mixed
+clusters are amber and pending POPs get dashed rings. Scroll zooms, drag pans, region
+chips toggle a whole region, and the inspector shows city/country, status, latency and
+drops, with relays and ports behind Details. No online tiles are used.
 
 The GUI uses explicit Allowed/Blocked state per datacenter (checked means allowed).
 The "Block newly added datacenters automatically" setting maps to the underlying
 allowlist/blocklist policy without exposing the old mode toggle. Preset menu, Apply,
-Allow all / Block all, and "Unblock all" remain. The status banner shows rules/backend/cache/persistence; boot
-persistence and manual refresh live in the Settings menu. Apply is the only elevation
+Allow all / Block all, and "Unblock all" remain. A floating pending bar appears over
+the map with Revert and Apply. A status pill holds rules/backend/cache/persistence
+details; boot persistence and manual refresh live in the Settings menu. Apply is the only elevation
 point. Errors from `pkexec`/helper are shown verbatim, including the exact `sudo`
 fallback. A relay-list change produces an in-app toast; selection warnings are shown
 below the map.
