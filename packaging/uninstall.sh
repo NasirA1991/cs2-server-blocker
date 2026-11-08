@@ -39,6 +39,11 @@ if [[ $ROOT == "/" ]]; then
   if [[ -x "$DEST/lib/cs2blocker/cs2blocker-helper" ]]; then
     "$DEST/lib/cs2blocker/cs2blocker-helper" clear || true
   fi
+  # Last-resort cleanup if the helper/config was already broken.  This still
+  # targets only our table; it never flushes the ruleset.
+  if command -v nft >/dev/null 2>&1; then
+    nft delete table inet cs2blocker 2>/dev/null || true
+  fi
   if command -v systemctl >/dev/null; then
     systemctl disable --now cs2blocker.service cs2blocker-refresh.timer 2>/dev/null || true
     systemctl stop cs2blocker-monitor.service 2>/dev/null || true
