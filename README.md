@@ -14,12 +14,17 @@ one; blocking the relay IPs of a POP makes that POP unattractive. This tool
 fetches Valve's SDR config for appid 730, validates it, and installs a small
 nftables table with one named set and one named counter per blocked POP.
 
+![CS2 Server Blocker world map](docs/screenshot.png)
+
 ---
 
 ## Features
 
-- GUI (GTK4/libadwaita): region-grouped POP list, live unprivileged ICMP ping,
-  per-POP drop counters, presets, mode toggle, Apply, Unblock all.
+- GUI (GTK4/libadwaita): an interactive world map with one dot per POP.
+  Click a dot to block/allow it, click a cluster to zoom in, drag to pan and
+  scroll to zoom. A detail card shows city, country, region, relay/port data,
+  live ICMP ping and per-POP drop counters. Region chips toggle a whole region,
+  presets load a selection, and Apply commits it through the helper.
 - CLI (`cs2blockctl`): `list`, `status`, `block`, `unblock`, `only`, `preset`,
   `refresh`, `apply`, `clear`, `ping`, `counters`, `doctor`.
 - Two modes:
@@ -27,7 +32,8 @@ nftables table with one named set and one named counter per blocked POP.
   - **Allow only selected**: block every other known POP; a newly announced POP
     is blocked by default after a refresh.
 - UDP-only by default (the SDR relay port range, derived from Valve's data).
-  ICMP keeps working, so the ping column is useful while a POP is blocked.
+  ICMP keeps working, so map pings and the detail card remain useful while a
+  POP is blocked.
 - Persistent across reboots with systemd, and refreshed weekly from Valve.
 - Root-owned SDR cache and config. The GUI never runs as root; privileged work
   goes through a small helper via a polkit action (`auth_admin_keep`) or
@@ -149,10 +155,17 @@ GUI:
 cs2blocker-gui
 ```
 
-Pick a mode, tick POPs (or choose a preset), press **Apply**. The first Apply
-prompts through polkit. The status banner shows whether rules are active, where
-the relay list came from, and whether boot persistence is enabled. Per-POP drop
-counters update every two seconds while the monitor is running.
+Pick a mode, click datacenter dots (or a region chip), then press **Apply**.
+The first Apply prompts through polkit. The map shows blocked POPs in red and
+allowed POPs in green; **Allow only selected** inverts that meaning. Scroll to
+zoom, drag to pan, and click a counted cluster to zoom into that area. Hovering
+a dot shows its city/country; clicking it opens the detail card with ping, relay
+count, ports and drops.
+
+The status banner shows whether rules are active, where the relay list came
+from, and whether boot persistence is enabled. Per-POP drop counters update
+every two seconds while the monitor is running. The **Settings** menu contains
+boot persistence and a manual refresh.
 
 CLI examples:
 
@@ -211,6 +224,8 @@ selection.
 - `cs2blocker-refresh.timer` runs weekly (plus 15 minutes after boot, with a
   randomized delay), refreshes the list and re-applies.
 - The GUI and CLI never need root for listing, pinging, status or counters.
+- The map is drawn locally from public-domain Natural Earth 1:110m land data;
+  it uses no online map tiles, tracking service or extra runtime dependency.
   `cs2blocker-monitor.service` publishes counters to
   `/run/cs2blocker/status.json`.
 
@@ -412,7 +427,10 @@ Layout:
 cs2blocker/core/        model, regions, SDR validation/cache, ruleset, backends
 cs2blocker/helper.py    privileged helper
 cs2blocker/cli.py       cs2blockctl
-cs2blocker/gui/app.py   GTK4 GUI
+cs2blocker/gui/app.py        GTK4 window and actions
+cs2blocker/gui/worldmap.py   Cairo world map, zoom/pan, dots and callouts
+cs2blocker/gui/map_data.py   Natural Earth land rings (public domain)
+cs2blocker/gui/locations.py  city/country labels from Valve POP descriptions
 packaging/              install/uninstall, PKGBUILD, units, polkit, desktop, icon
 tests/                  unit/integration tests and the ruleset snapshot
 research/               Phase 0 evidence (not installed)
@@ -422,6 +440,13 @@ The design notes and Phase 0 findings are in [docs/design.md](docs/design.md)
 and [docs/phase0-research.md](docs/phase0-research.md).
 
 ---
+
+## Map data
+
+The continent outlines are derived from Natural Earth 1:110m land data,
+which is in the public domain (<https://www.naturalearthdata.com/about/terms-of-use/>).
+The geometry is checked in and drawn locally; the app never requests map tiles.
+No online map service is contacted.
 
 ## License
 

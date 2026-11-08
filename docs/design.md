@@ -309,23 +309,21 @@ Packages install but **enable nothing**. The first Apply or an explicit
 
 **GUI: GTK4 + libadwaita via PyGObject.** It is already installed here (GTK 4.24,
 libadwaita 1.10, PyGObject 3.58), is native on GNOME, Wayland-native, and needs no Qt
-platform-theme plugins. The layout this app needs maps directly onto
-`Adw.PreferencesPage`/`Adw.ExpanderRow`/`Adw.ActionRow`/`Adw.Banner`. Trade-off: on KDE
-it uses Adwaita, not Breeze. If KDE-native looks matter more, switch to Qt6/PySide6 now
-(`qt6-base` is installed; `python-pyside6` is not).
+platform-theme plugins. Trade-off: on KDE it uses Adwaita, not Breeze.
 
-UI: region-grouped checkboxes; POPs with zero relays disabled; async ping column with
-`n/a` fallback; per-POP counters refreshed every 2 s; mode toggle ("Block selected" /
-"Allow only selected"); preset dropdown; Apply; prominent "Unblock all"; status banner
-(rules active, backend, last apply, cache age/bundled warning, boot persistence, monitor
-available). Apply is the only elevation point. Errors from `pkexec`/helper are shown
-verbatim, including the exact `sudo` fallback.
+The primary view is a locally drawn equirectangular world map (Cairo, Natural Earth
+1:110m public-domain land rings). Each POP with relay endpoints is a clickable dot;
+nearby dots cluster into a counted bubble that zooms in when clicked. Scroll zooms,
+drag pans, region chips toggle a whole region, and the detail card shows city/country,
+region, relay count, port range, live ICMP ping and per-POP drops. The map uses red for
+blocked, green for allowed, and amber for mixed clusters. No online tiles are used.
 
-Phase 5 additions live in the same window: rows highlight/accumulate when a POP's counter
-rises ("test mode"); if a refresh changed the revision or relay set, `state.json` carries
-`relay_list_changed` plus added/removed counts, and the GUI shows an in-app toast on the
-next status poll. The GUI warns before applying a selection that blocks everything or
-leaves fewer than two POPs.
+Mode toggle ("Block selected" / "Allow only selected"), preset dropdown, Apply, and
+"Unblock all" remain. The status banner shows rules/backend/cache/persistence; boot
+persistence and manual refresh live in the Settings menu. Apply is the only elevation
+point. Errors from `pkexec`/helper are shown verbatim, including the exact `sudo`
+fallback. A relay-list change produces an in-app toast; selection warnings are shown
+below the map.
 
 **CLI:**
 
