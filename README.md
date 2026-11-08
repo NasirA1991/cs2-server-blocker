@@ -203,6 +203,13 @@ toggle every server in it, expand the row to control individual servers, or use
 the continent's **⋮** menu to select every POP except one country. The map and
 sidebar stay in sync.
 
+Some cities have a Valve POP and a partner/Datapacket POP (for example `lhr`
+and `dlhr` in London). They are separate entries because they use different
+relay IPs; the map clusters them at the same city and the popover lists both.
+Valve's partner feed sometimes publishes those coordinates as
+`(latitude, longitude)` instead of `(longitude, latitude)`; the GUI normalizes
+the pair against the other POPs in the same country before drawing it.
+
 The status banner shows whether rules are active, where the relay list came
 from, and whether boot persistence is enabled. Per-POP drop counters update
 every two seconds while the monitor is running. The **Settings** menu contains

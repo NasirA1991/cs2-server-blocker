@@ -185,7 +185,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._build_entries()
 
     def _build_entries(self) -> None:
-        preliminary: list[tuple[Any, Any, str, str, str, tuple[float, float]]] = []
+        preliminary: list[tuple[Any, Any, str, tuple[float, float]]] = []
         primary_by_country: dict[str, list[tuple[float, float]]] = defaultdict(list)
         for pop in self.snapshot.pops.values():
             if not pop.relays or not pop.geo:
@@ -193,7 +193,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             location = parse_location(pop)
             country = location.country or "Unknown"
             raw = (float(pop.geo[0]), float(pop.geo[1]))
-            preliminary.append((pop, location, country, raw, "", ""))
+            preliminary.append((pop, location, country, raw))
             # Most Valve POPs publish (longitude, latitude), but some partner
             # POPs publish the pair reversed. Build a median from the normal
             # POPs in the same country so we can pick the sane orientation.
@@ -206,7 +206,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         }
 
         entries: list[MapEntry] = []
-        for pop, location, country, raw, _unused1, _unused2 in preliminary:
+        for pop, location, country, raw in preliminary:
             lon, lat = normalize_geo(raw, references.get(country))
             if not (-180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0):
                 continue
