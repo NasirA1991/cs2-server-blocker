@@ -1,0 +1,19 @@
+# Maintainer: CS2 Server Blocker contributors
+pkgname=cs2blocker
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Block CS2 matchmaking datacenters with persistent nftables rules"
+arch=('any')
+url="https://github.com/cs2blocker/cs2blocker"
+license=('MIT')
+depends=('python' 'nftables' 'polkit' 'systemd' 'python-gobject' 'gtk4' 'libadwaita')
+optdepends=('ipset: iptables/ipset fallback when nftables is unavailable')
+makedepends=('git')
+_repo_root=$(realpath "$startdir/..")
+source=("$pkgname::git+file://$_repo_root")
+sha256sums=('SKIP')
+
+package() {
+  cd "$srcdir/$pkgname"
+  bash packaging/install.sh --root "$pkgdir" --no-daemon-reload
+}

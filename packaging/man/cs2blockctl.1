@@ -1,0 +1,69 @@
+.TH CS2BLOCKCTL 1 "2026-11-08" "cs2blocker 0.1.0" "User Commands"
+.SH NAME
+cs2blockctl \- manage CS2 SDR datacenter blocking rules
+.SH SYNOPSIS
+.B cs2blockctl
+[\fB\-\-sudo\fR] \fICOMMAND\fR [\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B cs2blockctl
+lists CS2 SDR POPs, selects datacenters, and applies host firewall rules.
+Privileged changes are performed by a small helper through
+.BR pkexec (1)
+and a polkit action, or through
+.BR sudo (8)
+with \fB\-\-sudo\fR.
+.PP
+The tool only manages one nftables table,
+.IR "inet cs2blocker" .
+It does not touch the game, Steam, or other firewall tables.
+.SH COMMANDS
+.TP
+.B list [\-\-region REGION] [\-\-json]
+List POPs, regions, relay counts and port ranges.
+.TP
+.B status [\-\-json]
+Show active rules, selection, cache freshness and boot persistence.
+.TP
+.B block POP...
+Add POPs to the selection and switch to block mode.
+.TP
+.B unblock POP...
+Remove POPs from the selection.
+.TP
+.B only POP...
+Allow only the listed POPs; every other known POP is blocked.
+.TP
+.B preset [NAME] [\-\-list] [\-\-save] [\-\-delete]
+Apply or manage presets.
+.TP
+.B refresh
+Fetch a fresh SDR relay list and re-apply.
+.TP
+.B apply
+Re-apply the saved selection.
+.TP
+.B clear
+Remove all rules and empty the saved selection.
+.TP
+.B ping [POP...] [\-\-region REGION]
+ICMP-ping relay addresses (unprivileged).
+.TP
+.B counters [\-\-watch]
+Show live per-POP drop counters.
+.TP
+.B doctor [\-\-json]
+Run diagnostic checks.
+.SH FILES
+.TP
+.I /etc/cs2blocker/config.json
+Root-owned selection and presets, written only by the helper.
+.TP
+.I /var/lib/cs2blocker/sdr-730.json
+Root-owned cached SDR relay list.
+.TP
+.I /run/cs2blocker/status.json
+Live counters published by the monitor service.
+.SH SEE ALSO
+.BR nft (8),
+.BR pkexec (1),
+.BR systemctl (1)

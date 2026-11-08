@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=CS2 Server Blocker
+GenericName=CS2 Datacenter Blocker
+Comment=Block CS2 matchmaking datacenters with host firewall rules
+Exec=cs2blocker-gui
+Icon=cs2blocker
+Terminal=false
+Categories=Network;
+StartupNotify=true
+Keywords=CS2;Counter-Strike;SDR;firewall;latency;ping;

@@ -1,6 +1,6 @@
 [Unit]
 Description=CS2 Server Blocker firewall rules
-Documentation=man:cs2blockctl(1) https://github.com/cs2blocker/cs2blocker
+Documentation=https://github.com/cs2blocker/cs2blocker
 Wants=network-pre.target cs2blocker-monitor.service
 After=network-pre.target nftables.service ufw.service firewalld.service
 Before=network.target

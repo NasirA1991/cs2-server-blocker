@@ -1,6 +1,6 @@
 [Unit]
 Description=Refresh the CS2 SDR relay list and re-apply firewall rules
-Documentation=man:cs2blockctl(1)
+Documentation=https://github.com/cs2blocker/cs2blocker
 Wants=network-online.target
 After=network-online.target cs2blocker.service
 

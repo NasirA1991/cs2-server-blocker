@@ -1,0 +1,9 @@
+#!/usr/bin/python3
+import os
+import sys
+
+BASE = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(0, os.path.join(BASE, "lib", "cs2blocker"))
+from cs2blocker.gui.app import main
+
+raise SystemExit(main())

@@ -1,6 +1,6 @@
 [Unit]
 Description=Weekly refresh of the CS2 SDR relay list
-Documentation=man:cs2blockctl(1)
+Documentation=https://github.com/cs2blocker/cs2blocker
 
 [Timer]
 OnBootSec=15min
