@@ -88,7 +88,7 @@ def collect(paths: Paths, *, privileged: bool = False) -> list[Check]:
         if privileged:
             probe = run([nft, "list", "tables"], timeout=10.0)
             detail = "kernel accepts nft netlink commands"
-            if not probe.ok:
+            if probe.returncode != 0:
                 detail = probe.stderr.strip() or probe.stdout.strip() or "nft list tables failed"
             checks.append(
                 Check(
@@ -212,7 +212,7 @@ def collect(paths: Paths, *, privileged: bool = False) -> list[Check]:
     )
     agent = None
     for candidate in ("polkit-kde-authentication-agent-1", "polkit-gnome-authentication-agent-1", "lxpolkit", "polkit-mate-authentication-agent-1"):
-        result = run(["pgrep", "-x", candidate], timeout=5.0)
+        result = run(["pgrep", "-f", candidate], timeout=5.0)
         if result.returncode == 0:
             agent = candidate
             break

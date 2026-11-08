@@ -1,0 +1,9 @@
+#!/usr/bin/python3
+"""Development launcher for cs2blockctl (the package is installed to /usr)."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from cs2blocker.cli import main
+
+raise SystemExit(main())
