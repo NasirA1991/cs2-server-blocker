@@ -80,7 +80,10 @@ class PackagingTests(unittest.TestCase):
             timeout=30,
             check=False,
         )
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        detail = result.stderr + result.stdout
+        if result.returncode != 0 and "sysinit.target not found" in detail:
+            self.skipTest("systemd-analyze lacks distro unit files in this environment")
+        self.assertEqual(result.returncode, 0, detail)
 
     @unittest.skipUnless(shutil.which("desktop-file-validate"), "desktop-file-validate absent")
     def test_desktop_file(self):
