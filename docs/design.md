@@ -318,8 +318,10 @@ drag pans, region chips toggle a whole region, and the detail card shows city/co
 region, relay count, port range, live ICMP ping and per-POP drops. The map uses red for
 blocked, green for allowed, and amber for mixed clusters. No online tiles are used.
 
-Mode toggle ("Block selected" / "Allow only selected"), preset dropdown, Apply, and
-"Unblock all" remain. The status banner shows rules/backend/cache/persistence; boot
+The GUI uses explicit Allowed/Blocked state per datacenter (checked means allowed).
+The "Block newly added datacenters automatically" setting maps to the underlying
+allowlist/blocklist policy without exposing the old mode toggle. Preset menu, Apply,
+Allow all / Block all, and "Unblock all" remain. The status banner shows rules/backend/cache/persistence; boot
 persistence and manual refresh live in the Settings menu. Apply is the only elevation
 point. Errors from `pkexec`/helper are shown verbatim, including the exact `sudo`
 fallback. A relay-list change produces an in-app toast; selection warnings are shown

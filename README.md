@@ -30,15 +30,16 @@ state and ping:
   in or list its cities, drag to pan and scroll to zoom. A detail card shows
   city, country, region, relay/port data, live ICMP ping and per-POP drop
   counters. The sidebar has search, continent/country checkboxes, per-country
-  server expansion, and an **All except…** action per continent. Region chips
-  also toggle a whole region. Presets load a selection, and Apply commits it
-  through the helper.
+  server expansion, and a **Block all except…** action per continent. Region chips
+  also toggle a whole region. Presets set the allowed/blocked state, and Apply
+  commits it through the helper.
 - CLI (`cs2blockctl`): `list`, `status`, `block`, `unblock`, `only`, `preset`,
   `refresh`, `apply`, `clear`, `ping`, `counters`, `doctor`.
-- Two modes:
-  - **Block selected**: block only the selected POPs.
-  - **Allow only selected**: block every other known POP; a newly announced POP
-    is blocked by default after a refresh.
+- Explicit **Allowed / Blocked** state per datacenter. Checked means allowed.
+- **Block newly added datacenters automatically** setting: when enabled, new
+  Valve POPs start blocked after Apply; when disabled, they start allowed.
+- **Allow all / Block all** bulk actions, with a confirmation before applying a
+  state that leaves fewer than three datacenters allowed.
 - UDP-only by default (the SDR relay port range, derived from Valve's data).
   ICMP keeps working, so map pings and the detail card remain useful while a
   POP is blocked.
@@ -190,17 +191,17 @@ GUI:
 cs2blocker-gui
 ```
 
-Pick a mode, click datacenter dots (or a region chip, or a country in the
-sidebar), then press **Apply**. The first Apply prompts through polkit. The map
-shows blocked POPs in red and allowed POPs in green; **Allow only selected**
-inverts that meaning. Scroll to zoom, drag to pan, and click a counted cluster
-to zoom into that area. Hovering a dot shows its city/country; clicking it opens
+Click datacenter dots (or a region chip, or a country in the sidebar), then
+press **Apply**. The first Apply prompts through polkit. The map shows blocked
+POPs in red and allowed POPs in green. Checkboxes and row labels use the same
+allowed/blocked state everywhere. Scroll to zoom, drag to pan, and click a
+counted cluster to zoom into that area. Hovering a dot shows its city/country; clicking it opens
 the detail card with ping, relay count, ports and drops.
 
 The right-hand **Countries** panel groups POPs by continent and country. Use the
 search box for a country, city, or POP code. Click a country's checkbox to
 toggle every server in it, expand the row to control individual servers, or use
-the continent's **⋮** menu to select every POP except one country. The map and
+the continent's **⋮** menu to block every POP except one country. The map and
 sidebar stay in sync.
 
 Some cities have a Valve POP and a partner/Datapacket POP (for example `lhr`
