@@ -39,6 +39,11 @@ def build_plan(snapshot: SdrSnapshot, selection: Selection) -> FirewallPlan:
     else:
         blocked_codes = set(known) - selected
 
+    ip_to_pops: dict[str, set[str]] = {}
+    for code, pop in known.items():
+        for relay in pop.relays:
+            ip_to_pops.setdefault(relay.address, set()).add(code)
+
     selected_ips: set[str] = set()
     if selection.mode is Mode.ONLY:
         for code in selected & set(known):
@@ -66,6 +71,17 @@ def build_plan(snapshot: SdrSnapshot, selection: Selection) -> FirewallPlan:
             warnings.append(f"selected POP {code} has no relay endpoints")
 
     blocked.sort(key=lambda p: (_region_rank(p), p.code))
+    if selection.mode is Mode.BLOCK:
+        warned: set[str] = set()
+        for pop in blocked:
+            for relay in pop.relays:
+                others = (ip_to_pops.get(relay.address, set()) - {pop.code}) - selected
+                if others and relay.address not in warned:
+                    warned.add(relay.address)
+                    warnings.append(
+                        f"{relay.address} is shared with {', '.join(sorted(others))}; "
+                        "blocking it may affect those POPs too"
+                    )
     blocked_codes_final = {p.code for p in blocked}
     allowed = tuple(sorted(set(known) - blocked_codes_final))
 

@@ -100,6 +100,16 @@ class RulesetTests(unittest.TestCase):
         self.assertNotIn("8.8.8.8", text)
         self.assertIn("9.9.9.9", text)
 
+    def test_block_mode_warns_about_shared_ip(self):
+        snap = snapshot(
+            {
+                "aaa": pop_doc("Alpha", ipv4=["8.8.8.8"]),
+                "bbb": pop_doc("Beta", ipv4=["8.8.8.8"]),
+            }
+        )
+        plan = build_plan(snap, Selection(mode=Mode.BLOCK, pops=frozenset({"aaa"})))
+        self.assertTrue(any("shared" in w for w in plan.warnings))
+
     def test_unknown_selected_warns(self):
         plan = build_plan(self.real, Selection(mode=Mode.BLOCK, pops=frozenset({"zzzz"})))
         self.assertTrue(any("unknown" in w for w in plan.warnings))
