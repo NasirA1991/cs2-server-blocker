@@ -48,6 +48,7 @@ jobs:
             --target packaging/dist/cs2blocker-0.1.2-1.x86_64.rpm
           git archive --format=tar.gz --prefix=cs2blocker-0.1.2/ \
             -o packaging/dist/cs2blocker-0.1.2.tar.gz HEAD
+          (cd packaging/dist && sha256sum * > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: linux-packages

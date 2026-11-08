@@ -1,0 +1,77 @@
+name: AUR
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish to AUR (e.g. v0.1.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish AUR package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - name: Verify AUR SSH secret
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          test -n "$AUR_SSH_PRIVATE_KEY" || {
+            echo "Missing AUR_SSH_PRIVATE_KEY repository secret" >&2
+            exit 1
+          }
+
+      - name: Prepare SSH key and known hosts
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$HOME/.ssh"
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > "$HOME/.ssh/aur_key"
+          chmod 600 "$HOME/.ssh/aur_key"
+          ssh-keyscan -t rsa,ed25519 aur.archlinux.org > "$HOME/.ssh/known_hosts"
+
+      - name: Update AUR repository
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          test -n "$TAG"
+          docker run --rm \
+            -e TAG="$TAG" \
+            -e GIT_SSH_COMMAND="ssh -i /root/.ssh/aur_key -o UserKnownHostsFile=/root/.ssh/known_hosts" \
+            -v "$PWD:/src" \
+            -v "$HOME/.ssh/aur_key:/root/.ssh/aur_key:ro" \
+            -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
+            archlinux:latest bash -lc '
+              set -euo pipefail
+              pacman -Syu --noconfirm --needed base-devel git openssh
+              VERSION="${TAG#v}"
+              rm -rf /tmp/aur-cs2blocker
+              git clone ssh://aur@aur.archlinux.org/cs2blocker.git /tmp/aur-cs2blocker
+              cd /tmp/aur-cs2blocker
+              cp /src/packaging/aur/PKGBUILD PKGBUILD
+              cp /src/packaging/aur/cs2blocker.install cs2blocker.install
+              sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+              sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+              makepkg --printsrcinfo > .SRCINFO
+              git config user.name "NasirA1991"
+              git config user.email "cs2blocker@localhost"
+              git add PKGBUILD cs2blocker.install .SRCINFO
+              if git diff --cached --quiet; then
+                echo "AUR already up to date for ${VERSION}"
+                exit 0
+              fi
+              git commit -m "Update to ${VERSION}"
+              git push origin master
+            '
