@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>CS2 Server Blocker</vendor>
+  <vendor_url>https://github.com/cs2blocker/cs2blocker</vendor_url>
+
+  <action id="org.cs2blocker.helper">
+    <description>Manage CS2 datacenter blocking firewall rules</description>
+    <message>Authentication is required to change the CS2 datacenter blocking rules</message>
+    <icon_name>cs2blocker</icon_name>
+    <defaults>
+      <allow_anonymous>no</allow_anonymous>
+      <!-- Keep the authorization for a few minutes so Apply and the
+           persistence toggle do not prompt on every click. -->
+      <allow_active>auth_admin_keep</allow_active>
+      <allow_inactive>auth_admin_keep</allow_inactive>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/cs2blocker/cs2blocker-helper</annotate>
+  </action>
+</policyconfig>

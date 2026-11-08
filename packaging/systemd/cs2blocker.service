@@ -1,0 +1,34 @@
+[Unit]
+Description=CS2 Server Blocker firewall rules
+Documentation=man:cs2blockctl(1) https://github.com/cs2blocker/cs2blocker
+Wants=network-pre.target cs2blocker-monitor.service
+After=network-pre.target nftables.service ufw.service firewalld.service
+Before=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/cs2blocker/cs2blocker-helper apply
+ExecReload=/usr/lib/cs2blocker/cs2blocker-helper apply
+UMask=0022
+StateDirectory=cs2blocker
+StateDirectoryMode=0755
+RuntimeDirectory=cs2blocker
+RuntimeDirectoryMode=0755
+ConfigurationDirectory=cs2blocker
+ConfigurationDirectoryMode=0755
+ReadWritePaths=/etc/cs2blocker /var/lib/cs2blocker /run/cs2blocker
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target

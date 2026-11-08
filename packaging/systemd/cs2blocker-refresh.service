@@ -1,0 +1,29 @@
+[Unit]
+Description=Refresh the CS2 SDR relay list and re-apply firewall rules
+Documentation=man:cs2blockctl(1)
+Wants=network-online.target
+After=network-online.target cs2blocker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/cs2blocker/cs2blocker-helper refresh --timer
+TimeoutStartSec=180
+UMask=0022
+StateDirectory=cs2blocker
+StateDirectoryMode=0755
+RuntimeDirectory=cs2blocker
+RuntimeDirectoryMode=0755
+ConfigurationDirectory=cs2blocker
+ConfigurationDirectoryMode=0755
+ReadWritePaths=/etc/cs2blocker /var/lib/cs2blocker /run/cs2blocker
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN

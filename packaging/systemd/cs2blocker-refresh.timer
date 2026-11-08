@@ -1,0 +1,13 @@
+[Unit]
+Description=Weekly refresh of the CS2 SDR relay list
+Documentation=man:cs2blockctl(1)
+
+[Timer]
+OnBootSec=15min
+OnCalendar=weekly
+RandomizedDelaySec=6h
+Persistent=true
+Unit=cs2blocker-refresh.service
+
+[Install]
+WantedBy=timers.target

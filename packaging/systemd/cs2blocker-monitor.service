@@ -1,0 +1,29 @@
+[Unit]
+Description=Publish live cs2blocker drop counters for the GUI
+Documentation=man:cs2blockctl(1)
+After=cs2blocker.service
+PartOf=cs2blocker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/cs2blocker/cs2blocker-helper monitor --interval 2
+Restart=on-failure
+RestartSec=5
+UMask=0022
+RuntimeDirectory=cs2blocker
+RuntimeDirectoryMode=0755
+ReadWritePaths=/run/cs2blocker
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target
