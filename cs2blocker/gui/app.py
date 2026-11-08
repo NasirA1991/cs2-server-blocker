@@ -8,7 +8,9 @@ import shlex
 import subprocess
 import sys
 import threading
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -68,12 +70,32 @@ CSS = b"""
 MODE_LABELS = ["Block selected", "Allow only selected"]
 
 
+@dataclass
+class CountrySidebar:
+    country: str
+    entries: tuple[MapEntry, ...]
+    expander: Adw.ExpanderRow
+    check: Gtk.CheckButton
+    count_label: Gtk.Label
+    server_checks: dict[str, Gtk.CheckButton] = field(default_factory=dict)
+    server_pings: dict[str, Gtk.Label] = field(default_factory=dict)
+    server_drops: dict[str, Gtk.Label] = field(default_factory=dict)
+
+
+@dataclass
+class ContinentSidebar:
+    region: Region
+    entries: tuple[MapEntry, ...]
+    check: Gtk.CheckButton
+    count_label: Gtk.Label
+
+
 class Cs2BlockerWindow(Adw.ApplicationWindow):
     def __init__(self, application: Adw.Application, *, smoke_test: bool = False) -> None:
         super().__init__(application=application)
         self.set_title("CS2 Server Blocker")
-        self.set_default_size(1220, 840)
-        self.set_size_request(900, 650)
+        self.set_default_size(1380, 860)
+        self.set_size_request(1120, 700)
         self.smoke_test = smoke_test
         self.paths = Paths.default()
         self.config = default_config()
@@ -99,6 +121,11 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._seen_refresh: str | None = None
         self._region_chips: dict[Region, tuple[Gtk.Button, Gtk.Label, Gtk.Label]] = {}
         self._preset_keys: list[str | None] = [None]
+        self.search_query = ""
+        self.sidebar_page: Adw.PreferencesPage | None = None
+        self.country_widgets: dict[str, CountrySidebar] = {}
+        self.continent_widgets: dict[Region, ContinentSidebar] = {}
+        self._updating_sidebar = False
 
         self._install_css()
         self._load_data()
@@ -173,6 +200,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     lat=float(pop.geo[1]),
                     relays=pop.relay_count,
                     ports=ports,
+                    country=location.country or "Unknown",
                 )
             )
         entries.sort(key=lambda e: (REGION_ORDER.index(e.region) if e.region in REGION_ORDER else 99, e.code))
@@ -396,11 +424,63 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.footer_label = Gtk.Label(label="", xalign=0.0, wrap=True)
         self.footer_label.add_css_class("footer")
         content.append(self.footer_label)
-        root.append(content)
+
+        body = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        body.set_wide_handle(True)
+        body.set_vexpand(True)
+        body.set_start_child(content)
+        body.set_end_child(self._build_sidebar())
+        body.set_position(960)
+        root.append(body)
 
         self.toast_overlay = Adw.ToastOverlay()
         self.toast_overlay.set_child(root)
         self.set_content(self.toast_overlay)
+
+    def _build_sidebar(self) -> Gtk.Widget:
+        shell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        shell.add_css_class("sidebar-shell")
+        shell.set_margin_top(12)
+        shell.set_margin_bottom(12)
+        shell.set_margin_start(8)
+        shell.set_margin_end(0)
+        shell.set_size_request(350, -1)
+        title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        title = Gtk.Label(label="Countries", xalign=0.0)
+        title.add_css_class("section-title")
+        title.set_hexpand(True)
+        self.sidebar_count_label = Gtk.Label(label="")
+        self.sidebar_count_label.add_css_class("dim")
+        self.sidebar_count_label.add_css_class("footer")
+        title_row.append(title)
+        title_row.append(self.sidebar_count_label)
+        shell.append(title_row)
+
+        self.sidebar_search = Gtk.SearchEntry()
+        self.sidebar_search.set_placeholder_text("Search country, city, or POP")
+        self.sidebar_search.connect("search-changed", self._search_changed)
+        shell.append(self.sidebar_search)
+
+        quick_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        select_all = Gtk.Button(label="Select all")
+        select_all.add_css_class("flat")
+        select_all.connect("clicked", lambda *_: self._select_all())
+        clear = Gtk.Button(label="Clear")
+        clear.add_css_class("flat")
+        clear.connect("clicked", lambda *_: self._clear_all())
+        quick_row.append(select_all)
+        quick_row.append(clear)
+        self.sidebar_quick_box = quick_row
+        shell.append(quick_row)
+
+        self.sidebar_scroll = Gtk.ScrolledWindow()
+        self.sidebar_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.sidebar_scroll.set_vexpand(True)
+        shell.append(self.sidebar_scroll)
+        placeholder = Gtk.Label(label="Loading servers…")
+        placeholder.add_css_class("dim")
+        self.sidebar_scroll.set_child(placeholder)
+        return shell
 
     def _build_settings_popover(self) -> Gtk.Popover:
         popover = Gtk.Popover()
@@ -471,6 +551,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             counters=self.counters,
             focus=self.focus_code,
         )
+        self._rebuild_sidebar()
         self._update_stats()
         self._update_detail()
         self._update_selection_warnings()
@@ -529,6 +610,272 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 button.remove_css_class("region-chip-active")
             action = "select" if self.mode is Mode.BLOCK else "allow"
             button.set_tooltip_text(f"{action.title()} all {region.value} POPs")
+
+    def _rebuild_sidebar(self) -> None:
+        if not hasattr(self, "sidebar_scroll"):
+            return
+        query = self.search_query.casefold().strip()
+        page = Adw.PreferencesPage()
+        self.country_widgets.clear()
+        self.continent_widgets.clear()
+        any_group = False
+
+        for region in REGION_ORDER:
+            region_entries = [e for e in self.entries if e.region is region]
+            if not region_entries:
+                continue
+            by_country: dict[str, list[MapEntry]] = defaultdict(list)
+            for entry in region_entries:
+                by_country[entry.country or "Unknown"].append(entry)
+            filtered: list[tuple[str, list[MapEntry]]] = []
+            for country in sorted(by_country):
+                entries = by_country[country]
+                if not query or query in country.casefold() or query in region.value.casefold():
+                    filtered.append((country, entries))
+                    continue
+                matches = [
+                    entry
+                    for entry in entries
+                    if query in entry.title.casefold()
+                    or query in entry.subtitle.casefold()
+                    or query in entry.code.casefold()
+                ]
+                if matches:
+                    filtered.append((country, matches))
+            if not filtered:
+                continue
+            any_group = True
+            group = Adw.PreferencesGroup()
+            continent_row = Adw.ActionRow(title=region.value)
+            continent_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            continent_check.connect("toggled", self._continent_toggled, region)
+            continent_count = Gtk.Label(label="")
+            continent_count.add_css_class("footer")
+            continent_count.add_css_class("dim")
+            continent_row.add_prefix(continent_check)
+            continent_row.add_suffix(continent_count)
+            except_button = Gtk.MenuButton()
+            except_button.set_icon_name("view-more-symbolic")
+            except_button.add_css_class("flat")
+            except_button.set_tooltip_text(
+                f"Select every {region.value} POP except one country"
+            )
+            except_button.set_popover(self._build_except_popover(region, filtered))
+            continent_row.add_suffix(except_button)
+            group.add(continent_row)
+            self.continent_widgets[region] = ContinentSidebar(
+                region=region,
+                entries=tuple(region_entries),
+                check=continent_check,
+                count_label=continent_count,
+            )
+
+            for country, country_entries in filtered:
+                expander = Adw.ExpanderRow(title=country)
+                expander.set_subtitle("")
+                country_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                country_check.connect("toggled", self._country_toggled, country)
+                country_count = Gtk.Label(label="")
+                country_count.add_css_class("footer")
+                country_count.add_css_class("dim")
+                expander.add_prefix(country_check)
+                expander.add_suffix(country_count)
+                if query or len(country_entries) == 1:
+                    expander.set_expanded(True)
+                widget = CountrySidebar(
+                    country=country,
+                    entries=tuple(country_entries),
+                    expander=expander,
+                    check=country_check,
+                    count_label=country_count,
+                )
+                for entry in country_entries:
+                    row = Adw.ActionRow(
+                        title=entry.title,
+                        subtitle=f"{entry.code} · {entry.subtitle}",
+                    )
+                    row.set_activatable(True)
+                    row.connect("activated", lambda _row, code=entry.code: self._toggle_pop(code))
+                    check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                    check.connect("toggled", self._code_toggled, entry.code)
+                    ping_label = Gtk.Label(label="—", width_chars=7, xalign=1.0)
+                    ping_label.add_css_class("footer")
+                    ping_label.add_css_class("dim")
+                    drop_label = Gtk.Label(label="0", width_chars=5, xalign=1.0)
+                    drop_label.add_css_class("footer")
+                    drop_label.add_css_class("dim")
+                    row.add_prefix(check)
+                    row.add_suffix(ping_label)
+                    row.add_suffix(drop_label)
+                    expander.add_row(row)
+                    widget.server_checks[entry.code] = check
+                    widget.server_pings[entry.code] = ping_label
+                    widget.server_drops[entry.code] = drop_label
+                group.add(expander)
+                self.country_widgets[country] = widget
+            page.add(group)
+
+        if not any_group:
+            group = Adw.PreferencesGroup()
+            row = Adw.ActionRow(
+                title="No matching datacenters",
+                subtitle="Try a country, city, or POP code.",
+            )
+            group.add(row)
+            page.add(group)
+        self.sidebar_page = page
+        self.sidebar_scroll.set_child(page)
+        self._update_sidebar_selection()
+
+    def _build_except_popover(
+        self, region: Region, countries: list[tuple[str, list[MapEntry]]]
+    ) -> Gtk.Popover:
+        popover = Gtk.Popover()
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        outer.set_margin_top(10)
+        outer.set_margin_bottom(10)
+        outer.set_margin_start(10)
+        outer.set_margin_end(10)
+        title = Gtk.Label(label=f"Select every {region.value} POP except…", xalign=0.0)
+        title.add_css_class("section-title")
+        outer.append(title)
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_min_content_height(180)
+        scrolled.set_max_content_height(320)
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        for country, entries in sorted(countries, key=lambda item: item[0]):
+            button = Gtk.Button(label=country)
+            button.add_css_class("flat")
+            button.set_halign(Gtk.Align.FILL)
+            button.connect(
+                "clicked",
+                lambda _button, c=country: (
+                    self._select_all_except(region, c),
+                    popover.popdown(),
+                ),
+            )
+            inner.append(button)
+        scrolled.set_child(inner)
+        outer.append(scrolled)
+        popover.set_child(outer)
+        return popover
+
+    def _select_all_except(self, region: Region, country: str) -> None:
+        region_codes = {entry.code for entry in self.entries if entry.region is region}
+        except_codes = {
+            entry.code
+            for entry in self.entries
+            if entry.region is region and entry.country == country
+        }
+        self.selected.difference_update(region_codes)
+        self.selected.update(region_codes - except_codes)
+        self.focus_code = next(
+            (entry.code for entry in self.entries if entry.code in region_codes - except_codes),
+            None,
+        )
+        self.map.zoom_to_region(region)
+        self._pending_changed()
+
+    def _update_sidebar_selection(self) -> None:
+        if self._updating_sidebar or self.sidebar_page is None:
+            return
+        self._updating_sidebar = True
+        try:
+            for widget in self.country_widgets.values():
+                codes = [entry.code for entry in widget.entries]
+                selected = sum(1 for code in codes if code in self.selected)
+                total = len(codes)
+                widget.check.set_active(selected == total and total > 0)
+                widget.check.set_inconsistent(0 < selected < total)
+                blocked = sum(1 for entry in widget.entries if self._is_blocked(entry.code))
+                color = (
+                    "#ff6b6b"
+                    if blocked == total and total > 0
+                    else ("#36d399" if blocked == 0 else "#f6c177")
+                )
+                widget.count_label.set_markup(
+                    f"<span foreground='{color}'>{blocked}/{total}</span>"
+                )
+                widget.count_label.set_tooltip_text(f"{blocked} blocked of {total}")
+                widget.expander.set_subtitle(
+                    f"{selected}/{total} selected"
+                    if not (selected == total and total > 0)
+                    else "All selected"
+                )
+                for code, check in widget.server_checks.items():
+                    check.set_active(code in self.selected)
+                    ping = self.pings.get(code)
+                    widget.server_pings[code].set_text(
+                        "—" if ping is None else f"{ping:.0f} ms"
+                    )
+                    widget.server_drops[code].set_text(str(self.counters.get(code, 0)))
+            for widget in self.continent_widgets.values():
+                codes = [entry.code for entry in widget.entries]
+                selected = sum(1 for code in codes if code in self.selected)
+                total = len(codes)
+                widget.check.set_active(selected == total and total > 0)
+                widget.check.set_inconsistent(0 < selected < total)
+                blocked = sum(1 for entry in widget.entries if self._is_blocked(entry.code))
+                color = (
+                    "#ff6b6b"
+                    if blocked == total and total > 0
+                    else ("#36d399" if blocked == 0 else "#f6c177")
+                )
+                widget.count_label.set_markup(
+                    f"<span foreground='{color}'>{blocked}/{total}</span>"
+                )
+                widget.count_label.set_tooltip_text(f"{blocked} blocked of {total}")
+            all_codes = [entry.code for entry in self.entries]
+            selected = sum(1 for code in all_codes if code in self.selected)
+            self.sidebar_count_label.set_text(f"{selected}/{len(all_codes)} selected")
+        finally:
+            self._updating_sidebar = False
+
+    def _search_changed(self, entry: Gtk.SearchEntry) -> None:
+        self.search_query = entry.get_text().strip()
+        self._rebuild_sidebar()
+
+    def _continent_toggled(self, check: Gtk.CheckButton, region: Region) -> None:
+        if self._updating_sidebar:
+            return
+        codes = [entry.code for entry in self.entries if entry.region is region]
+        if check.get_active():
+            self.selected.update(codes)
+        else:
+            self.selected.difference_update(codes)
+        self._pending_changed()
+
+    def _country_toggled(self, check: Gtk.CheckButton, country: str) -> None:
+        if self._updating_sidebar:
+            return
+        widget = self.country_widgets.get(country)
+        if widget is None:
+            return
+        codes = [entry.code for entry in widget.entries]
+        if check.get_active():
+            self.selected.update(codes)
+        else:
+            self.selected.difference_update(codes)
+        self._pending_changed()
+
+    def _code_toggled(self, check: Gtk.CheckButton, code: str) -> None:
+        if self._updating_sidebar:
+            return
+        if check.get_active():
+            self.selected.add(code)
+        else:
+            self.selected.discard(code)
+        self.focus_code = code
+        self._pending_changed()
+
+    def _select_all(self) -> None:
+        self.selected.update(entry.code for entry in self.entries)
+        self._pending_changed()
+
+    def _clear_all(self) -> None:
+        self.selected.difference_update(entry.code for entry in self.entries)
+        self._pending_changed()
 
     def _update_stats(self) -> None:
         codes = [entry.code for entry in self.entries]
@@ -614,6 +961,11 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.dirty_stat.set_visible(dirty)
         for button, _label, _dot in self._region_chips.values():
             button.set_sensitive(not self._busy)
+        self.map.set_sensitive(not self._busy)
+        self.sidebar_search.set_sensitive(not self._busy)
+        self.sidebar_quick_box.set_sensitive(not self._busy)
+        if self.sidebar_page is not None:
+            self.sidebar_page.set_sensitive(not self._busy)
         self.persistence_switch.set_sensitive(installed and not self._busy)
 
     # --------------------------------------------------------------- actions
@@ -702,6 +1054,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.map.set_selection(self.selected, self.mode)
         self.map.set_focus(self.focus_code)
         self._update_stats()
+        self._update_sidebar_selection()
         self._update_detail()
         self._update_selection_warnings()
         self._update_buttons()
@@ -787,6 +1140,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._update_mode_buttons()
         self.map.set_selection(self.selected, self.mode)
         self._update_stats()
+        self._update_sidebar_selection()
         self._update_detail()
         self._update_selection_warnings()
         self._update_buttons()
@@ -929,6 +1283,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         except Exception:
             self.pings[code] = None
         self.map.set_pings(self.pings)
+        self._update_sidebar_selection()
         if code == self.focus_code:
             self._update_detail()
         return False
@@ -981,6 +1336,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         }
         self.counters = counters
         self.map.set_counters(counters)
+        self._update_sidebar_selection()
         if self.focus_code:
             self._update_detail()
         cache = state.get("cache") or {}

@@ -14,7 +14,7 @@ one; blocking the relay IPs of a POP makes that POP unattractive. This tool
 fetches Valve's SDR config for appid 730, validates it, and installs a small
 nftables table with one named set and one named counter per blocked POP.
 
-![CS2 Server Blocker world map](docs/screenshot.png)
+![CS2 Server Blocker world map and countries sidebar](docs/screenshot.png)
 
 Clicking a crowded cluster opens the individual cities, each with its own
 state and ping:
@@ -25,11 +25,14 @@ state and ping:
 
 ## Features
 
-- GUI (GTK4/libadwaita): an interactive world map with one dot per POP.
-  Click a dot to block/allow it, click a cluster to zoom in, drag to pan and
-  scroll to zoom. A detail card shows city, country, region, relay/port data,
-  live ICMP ping and per-POP drop counters. Region chips toggle a whole region,
-  presets load a selection, and Apply commits it through the helper.
+- GUI (GTK4/libadwaita): an interactive world map with one dot per POP and a
+  **Countries** sidebar. Click a dot to block/allow it, click a cluster to zoom
+  in or list its cities, drag to pan and scroll to zoom. A detail card shows
+  city, country, region, relay/port data, live ICMP ping and per-POP drop
+  counters. The sidebar has search, continent/country checkboxes, per-country
+  server expansion, and an **All except…** action per continent. Region chips
+  also toggle a whole region. Presets load a selection, and Apply commits it
+  through the helper.
 - CLI (`cs2blockctl`): `list`, `status`, `block`, `unblock`, `only`, `preset`,
   `refresh`, `apply`, `clear`, `ping`, `counters`, `doctor`.
 - Two modes:
@@ -160,12 +163,18 @@ GUI:
 cs2blocker-gui
 ```
 
-Pick a mode, click datacenter dots (or a region chip), then press **Apply**.
-The first Apply prompts through polkit. The map shows blocked POPs in red and
-allowed POPs in green; **Allow only selected** inverts that meaning. Scroll to
-zoom, drag to pan, and click a counted cluster to zoom into that area. Hovering
-a dot shows its city/country; clicking it opens the detail card with ping, relay
-count, ports and drops.
+Pick a mode, click datacenter dots (or a region chip, or a country in the
+sidebar), then press **Apply**. The first Apply prompts through polkit. The map
+shows blocked POPs in red and allowed POPs in green; **Allow only selected**
+inverts that meaning. Scroll to zoom, drag to pan, and click a counted cluster
+to zoom into that area. Hovering a dot shows its city/country; clicking it opens
+the detail card with ping, relay count, ports and drops.
+
+The right-hand **Countries** panel groups POPs by continent and country. Use the
+search box for a country, city, or POP code. Click a country's checkbox to
+toggle every server in it, expand the row to control individual servers, or use
+the continent's **⋮** menu to select every POP except one country. The map and
+sidebar stay in sync.
 
 The status banner shows whether rules are active, where the relay list came
 from, and whether boot persistence is enabled. Per-POP drop counters update

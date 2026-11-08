@@ -57,6 +57,7 @@ class MapEntry:
     lat: float
     relays: int
     ports: str
+    country: str = ""
 
 
 @dataclass
@@ -436,15 +437,29 @@ class WorldMap(Gtk.DrawingArea):
         if self.zoom > 3.2:
             return
         cr.save()
-        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(11.0)
         for region, (lon, lat) in REGION_ANCHORS.items():
+            points = [entry for entry in self.entries if entry.region is region]
+            if not points:
+                continue
             x, y = self._project(lon, lat)
             if not (self._map_rect[0] < x < self._map_rect[0] + self._map_rect[2]):
                 continue
-            cr.set_source_rgba(0.68, 0.83, 0.91, 0.32)
-            cr.move_to(x, y)
-            cr.show_text(region.value.upper())
+            blocked = sum(1 for entry in points if self._is_blocked(entry.code))
+            color = BLOCKED if blocked == len(points) else (ALLOWED if blocked == 0 else AMBER)
+            text = f"{region.value.upper()}  {blocked}/{len(points)}"
+            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            cr.set_font_size(10.0)
+            ext = cr.text_extents(text)
+            pad = 6
+            self._rounded_rect(cr, x - pad, y - 12, ext.width + 2 * pad, 18, 6)
+            cr.set_source_rgba(0.015, 0.06, 0.10, 0.56)
+            cr.fill()
+            cr.set_source_rgba(*color, 0.62)
+            cr.set_line_width(0.6)
+            cr.stroke()
+            cr.set_source_rgba(*color, 0.9)
+            cr.move_to(x, y + 2)
+            cr.show_text(text)
         cr.restore()
 
     def _is_blocked(self, code: str) -> bool:
