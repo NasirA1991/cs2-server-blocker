@@ -69,6 +69,15 @@ class HelperError(Cs2BlockerError):
         self.code = code
 
 
+def _require_root() -> None:
+    if os.geteuid() != 0:
+        raise HelperError(
+            "the helper must run as root; use cs2blockctl with pkexec/sudo, "
+            "or run: sudo /usr/lib/cs2blocker/cs2blocker-helper ...",
+            code=1,
+        )
+
+
 def _read_state(paths: Paths, *, require_root: bool = True) -> dict[str, Any]:
     document = read_optional_json(paths.state_file, require_root=require_root)
     return document if isinstance(document, dict) else {}
@@ -244,6 +253,7 @@ def _restore_config(paths: Paths, old_document: dict[str, Any] | None, existed: 
 
 
 def apply_command(paths: Paths, args: argparse.Namespace, *, backend: Any = None) -> int:
+    _require_root()
     paths.ensure_dirs()
     with lock(paths):
         had_config = paths.config_file.exists()
@@ -308,6 +318,7 @@ def _apply_saved_config(
 
 
 def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
+    _require_root()
     paths.ensure_dirs()
     with lock(paths):
         config = load_config(paths, require_root=True, missing_ok=True)
@@ -374,6 +385,7 @@ def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
 
 
 def clear_command(paths: Paths, args: argparse.Namespace | None = None) -> int:
+    _require_root()
     paths.ensure_dirs()
     with lock(paths):
         config = load_config(paths, require_root=True, missing_ok=True)
@@ -506,6 +518,7 @@ def status_command(paths: Paths, args: argparse.Namespace) -> int:
 
 
 def persistence_command(paths: Paths, args: argparse.Namespace) -> int:
+    _require_root()
     if not which_fixed("systemctl"):
         raise HelperError("systemctl is not available; enable the unit with your init system")
     units = [UNIT_SERVICE, UNIT_REFRESH_TIMER]
@@ -519,6 +532,7 @@ def persistence_command(paths: Paths, args: argparse.Namespace) -> int:
 
 
 def preset_save_command(paths: Paths, args: argparse.Namespace) -> int:
+    _require_root()
     paths.ensure_dirs()
     with lock(paths):
         config = load_config(paths, require_root=True, missing_ok=True)
@@ -539,6 +553,7 @@ def preset_save_command(paths: Paths, args: argparse.Namespace) -> int:
 
 
 def preset_delete_command(paths: Paths, args: argparse.Namespace) -> int:
+    _require_root()
     paths.ensure_dirs()
     with lock(paths):
         config = load_config(paths, require_root=True, missing_ok=True)
@@ -582,6 +597,7 @@ def _monitor_payload(backend: Any) -> dict[str, Any]:
 
 
 def monitor_command(paths: Paths, args: argparse.Namespace) -> int:
+    _require_root()
     paths.ensure_dirs()
     try:
         config = load_config(paths, require_root=False, missing_ok=True)
@@ -622,6 +638,7 @@ def monitor_command(paths: Paths, args: argparse.Namespace) -> int:
 
 
 def doctor_command(paths: Paths, args: argparse.Namespace) -> int:
+    _require_root()
     checks = collect_diagnostics(paths, privileged=True)
     if args.json:
         print(diagnostics_json(checks))
