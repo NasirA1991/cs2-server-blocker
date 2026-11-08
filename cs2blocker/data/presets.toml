@@ -1,0 +1,17 @@
+# Built-in presets.  Copied into /etc/cs2blocker/config.json on first use.
+# Region names must match cs2blocker.core.model.Region.
+
+[presets.eu_only]
+name = "EU only"
+mode = "only"
+regions = ["Europe"]
+
+[presets.block_asia_oceania]
+name = "Block Asia + Oceania"
+mode = "block"
+regions = ["Asia", "Oceania"]
+
+[presets.nordics]
+name = "Nordics"
+mode = "only"
+pops = ["sto", "sto2"]

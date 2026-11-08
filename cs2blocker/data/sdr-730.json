@@ -1,0 +1,2189 @@
+{
+  "appid": 730,
+  "fetched_at": "2026-11-08T01:49:06+00:00",
+  "pops": {
+    "ams": {
+      "aliases": [],
+      "desc": "Amsterdam (Netherlands)",
+      "geo": [
+        4.9,
+        52.37
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "155.133.248.36",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.248.37",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.248.40",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.248.41",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "atl": {
+      "aliases": [],
+      "desc": "Atlanta (Georgia)",
+      "geo": [
+        -84.39,
+        33.76
+      ],
+      "region": "North America",
+      "relays": [
+        {
+          "address": "162.254.199.170",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.199.173",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.199.178",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.199.180",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "bom2": {
+      "aliases": [
+        "bom"
+      ],
+      "desc": "Mumbai (India)",
+      "geo": [
+        72.99,
+        19.18
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "155.133.224.20",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.224.21",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "ctu": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Chengdu (China)",
+      "geo": [
+        103.7,
+        30.7
+      ],
+      "region": "Asia",
+      "relays": [],
+      "tier": 1
+    },
+    "ctum": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Chengdu - Mobile (China)",
+      "geo": [
+        103.7,
+        30.7
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "112.45.45.129",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "112.45.45.130",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "112.45.45.131",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "112.45.45.132",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "112.45.45.133",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "112.45.45.134",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "ctut": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Chengdu - Telecom (China)",
+      "geo": [
+        103.7,
+        30.7
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "118.123.224.192",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "118.123.224.193",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "118.123.224.242",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "118.123.224.243",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "118.123.224.244",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "ctuu": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Chengdu - Unicom (China)",
+      "geo": [
+        103.7,
+        30.7
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "101.206.160.192",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "101.206.160.193",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "101.206.160.194",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "101.206.160.195",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "dfjr": {
+      "aliases": [],
+      "desc": "Datapacket Fujairah (UAE)",
+      "geo": [
+        56.3414,
+        25.1164
+      ],
+      "region": "Middle East",
+      "relays": [
+        {
+          "address": "89.222.117.194",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "89.222.117.200",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "dfra": {
+      "aliases": [],
+      "desc": "Datapacket Frankfurt (Germany)",
+      "geo": [
+        50.11,
+        8.68
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "89.222.108.161",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "89.222.108.162",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "dfw": {
+      "aliases": [],
+      "desc": "Dallas (Texas)",
+      "geo": [
+        -96.8,
+        32.77
+      ],
+      "region": "North America",
+      "relays": [
+        {
+          "address": "162.254.194.37",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.194.38",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.194.53",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.194.54",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "dlhr": {
+      "aliases": [],
+      "desc": "Datapacket London (England)",
+      "geo": [
+        51.51,
+        0.12
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "212.102.63.139",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "212.102.63.140",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "dsto": {
+      "aliases": [],
+      "desc": "Datapacket Stockholm (Sweden)",
+      "geo": [
+        37.62,
+        55.75
+      ],
+      "region": "Europe",
+      "relays": [],
+      "tier": 1
+    },
+    "dvie": {
+      "aliases": [],
+      "desc": "Datapacket Vienna (Austria)",
+      "geo": [
+        48.21,
+        16.36
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "152.233.52.97",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "152.233.52.98",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "dxb": {
+      "aliases": [],
+      "desc": "Dubai (United Arab Emirates)",
+      "geo": [
+        55.3,
+        25.25
+      ],
+      "region": "Middle East",
+      "relays": [
+        {
+          "address": "185.25.183.163",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "185.25.183.179",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "eat": {
+      "aliases": [
+        "mwh"
+      ],
+      "desc": "Wenatchee (Washington)",
+      "geo": [
+        -120.32,
+        47.47
+      ],
+      "region": "North America",
+      "relays": [],
+      "tier": 1
+    },
+    "eze": {
+      "aliases": [],
+      "desc": "Buenos Aires (Argentina)",
+      "geo": [
+        -58.38,
+        -34.6
+      ],
+      "region": "South America",
+      "relays": [
+        {
+          "address": "155.133.255.98",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.255.99",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.255.162",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.255.163",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "fra": {
+      "aliases": [],
+      "desc": "Frankfurt (Germany)",
+      "geo": [
+        8.68,
+        50.12
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "155.133.226.68",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.70",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.72",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.77",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.84",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.85",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.86",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.226.87",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.36",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.37",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.43",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.45",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.52",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.53",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.55",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.197.56",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "fsn": {
+      "aliases": [],
+      "desc": "Hetzner Falkenstein (Germany)",
+      "geo": [
+        12.37,
+        50.48
+      ],
+      "region": "Europe",
+      "relays": [],
+      "tier": 1
+    },
+    "gru": {
+      "aliases": [],
+      "desc": "Sao Paulo (Brazil)",
+      "geo": [
+        -46.64,
+        -23.53
+      ],
+      "region": "South America",
+      "relays": [
+        {
+          "address": "155.133.227.35",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.227.40",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.227.41",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.227.51",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.227.56",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.227.57",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "gum": {
+      "aliases": [],
+      "desc": "Guam",
+      "geo": [
+        144.794,
+        13.444
+      ],
+      "region": "Oceania",
+      "relays": [
+        {
+          "address": "185.25.180.18",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "185.25.180.19",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "hel": {
+      "aliases": [
+        "helm"
+      ],
+      "desc": "Hetzner Helsinki (Finland)",
+      "geo": [
+        24.85,
+        60.11
+      ],
+      "region": "Europe",
+      "relays": [],
+      "tier": 1
+    },
+    "hkg": {
+      "aliases": [],
+      "desc": "Hong Kong",
+      "geo": [
+        113.92,
+        22.31
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "103.28.54.163",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.164",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.167",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.172",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.174",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.179",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.180",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.183",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.188",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.28.54.189",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "iad": {
+      "aliases": [],
+      "desc": "Sterling (Virginia)",
+      "geo": [
+        -77.43,
+        39.01
+      ],
+      "region": "North America",
+      "relays": [
+        {
+          "address": "162.254.192.88",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.192.89",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.192.102",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.192.103",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "jnb": {
+      "aliases": [],
+      "desc": "Johannesburg (South Africa)",
+      "geo": [
+        28.0,
+        -26.2
+      ],
+      "region": "Africa",
+      "relays": [
+        {
+          "address": "155.133.238.178",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.238.194",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "lax": {
+      "aliases": [],
+      "desc": "Los Angeles (California)",
+      "geo": [
+        -118.25,
+        34.05
+      ],
+      "region": "North America",
+      "relays": [
+        {
+          "address": "162.254.195.52",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.195.53",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.195.70",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.195.72",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "lhr": {
+      "aliases": [],
+      "desc": "London (England)",
+      "geo": [
+        -0.13,
+        51.51
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "162.254.196.66",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.196.70",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.196.82",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.196.85",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "lim": {
+      "aliases": [],
+      "desc": "Lima (Peru)",
+      "geo": [
+        -77.05,
+        -12.06
+      ],
+      "region": "South America",
+      "relays": [
+        {
+          "address": "155.133.244.35",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.244.36",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.244.51",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.244.52",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "maa2": {
+      "aliases": [
+        "maa"
+      ],
+      "desc": "Chennai - Ambattur (India)",
+      "geo": [
+        80.15,
+        13.11
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "155.133.225.18",
+          "port_range": [
+            27015,
+            27078
+          ]
+        },
+        {
+          "address": "155.133.225.19",
+          "port_range": [
+            27015,
+            27078
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "mad": {
+      "aliases": [],
+      "desc": "Madrid (Spain)",
+      "geo": [
+        3.34,
+        40.23
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "155.133.246.34",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.246.39",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.246.40",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.246.50",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "ord": {
+      "aliases": [],
+      "desc": "Chicago (Illinois)",
+      "geo": [
+        -87.69,
+        41.84
+      ],
+      "region": "North America",
+      "relays": [
+        {
+          "address": "162.254.193.71",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.193.73",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.193.98",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "162.254.193.99",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "par": {
+      "aliases": [],
+      "desc": "Paris (France)",
+      "geo": [
+        2.35,
+        48.86
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "185.25.182.18",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "185.25.182.19",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "185.25.182.50",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "185.25.182.51",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "pek": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Beijing (China)",
+      "geo": [
+        116.38,
+        39.91
+      ],
+      "region": "Asia",
+      "relays": [],
+      "tier": 1
+    },
+    "pekm": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Beijing - Mobile (China)",
+      "geo": [
+        116.38,
+        39.91
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "39.156.182.1",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "39.156.182.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "39.156.182.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "39.156.182.4",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "39.156.182.5",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "pekt": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Beijing - Telecom (China)",
+      "geo": [
+        116.38,
+        39.91
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "114.113.213.1",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "114.113.213.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "114.113.213.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "114.113.213.4",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "114.113.213.5",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "peku": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Beijing - Unicom (China)",
+      "geo": [
+        116.38,
+        39.91
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "111.206.90.1",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "111.206.90.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "111.206.90.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "111.206.90.4",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "111.206.90.5",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "pvg": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Shanghai (China)",
+      "geo": [
+        121.5,
+        31.2
+      ],
+      "region": "Asia",
+      "relays": [],
+      "tier": 1
+    },
+    "pvgm": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Shanghai - Mobile (China)",
+      "geo": [
+        121.5,
+        31.2
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "117.185.19.1",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.4",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.5",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.33",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.34",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "117.185.19.35",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "pvgt": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Shanghai - Telecom (China)",
+      "geo": [
+        121.5,
+        31.2
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "61.152.104.1",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "61.152.104.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "61.152.104.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "61.152.104.4",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "61.152.104.5",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "180.163.126.1",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "180.163.126.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "180.163.126.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "pvgu": {
+      "aliases": [],
+      "desc": "Alibaba Cloud Shanghai - Unicom (China)",
+      "geo": [
+        121.5,
+        31.2
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "140.206.227.129",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.130",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.131",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.132",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.133",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.161",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.162",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "140.206.227.163",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "scl": {
+      "aliases": [],
+      "desc": "Santiago (Chile)",
+      "geo": [
+        -70.47,
+        -33.23
+      ],
+      "region": "South America",
+      "relays": [
+        {
+          "address": "155.133.249.163",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.249.179",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "sea": {
+      "aliases": [],
+      "desc": "Seattle (Washington)",
+      "geo": [
+        -122.33,
+        47.61
+      ],
+      "region": "North America",
+      "relays": [
+        {
+          "address": "205.196.6.135",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "205.196.6.149",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "seo": {
+      "aliases": [],
+      "desc": "Seoul (South Korea)",
+      "geo": [
+        126.99,
+        37.56
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "146.66.152.36",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.152.37",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.152.41",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.152.42",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "sgp": {
+      "aliases": [],
+      "desc": "Singapore",
+      "geo": [
+        103.83,
+        1.28
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "103.10.124.116",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.10.124.117",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.10.124.118",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.10.124.119",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.10.124.120",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "103.10.124.121",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "sto": {
+      "aliases": [],
+      "desc": "Stockholm - Kista (Sweden)",
+      "geo": [
+        17.9,
+        59.4
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "162.254.198.41",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.42",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.43",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.47",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.49",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.50",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.51",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.101",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.102",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.103",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "162.254.198.156",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "sto2": {
+      "aliases": [],
+      "desc": "Stockholm - Bromma (Sweden)",
+      "geo": [
+        17.87,
+        59.34
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "155.133.252.37",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.38",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.52",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.53",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.84",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.85",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.86",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.87",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.88",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "155.133.252.89",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "syd": {
+      "aliases": [],
+      "desc": "Sydney (Australia)",
+      "geo": [
+        151.21,
+        -33.86
+      ],
+      "region": "Oceania",
+      "relays": [
+        {
+          "address": "103.10.125.20",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "103.10.125.21",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "103.10.125.40",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "103.10.125.41",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 0
+    },
+    "tgd": {
+      "aliases": [],
+      "desc": "Tencent Guangzhou (China)",
+      "geo": [
+        113.3,
+        23.1
+      ],
+      "region": "Asia",
+      "relays": [],
+      "tier": 1
+    },
+    "tgdm": {
+      "aliases": [],
+      "desc": "Tencent Guangzhou - Mobile (China)",
+      "geo": [
+        113.3,
+        23.1
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "120.233.106.112",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "120.233.106.113",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "120.233.106.114",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "120.233.106.115",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "120.233.106.116",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "tgdt": {
+      "aliases": [],
+      "desc": "Tencent Guangzhou - Telecom (China)",
+      "geo": [
+        113.3,
+        23.1
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "183.60.122.2",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "183.60.122.3",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "183.60.122.4",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "183.60.122.5",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "183.60.122.6",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "tgdu": {
+      "aliases": [],
+      "desc": "Tencent Guangzhou - Unicom (China)",
+      "geo": [
+        113.3,
+        23.1
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "58.254.163.32",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "58.254.163.33",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "58.254.163.34",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "58.254.163.35",
+          "port_range": [
+            27015,
+            27044
+          ]
+        },
+        {
+          "address": "58.254.163.36",
+          "port_range": [
+            27015,
+            27044
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "tyo": {
+      "aliases": [
+        "tyo1",
+        "tyo2",
+        "tyo3"
+      ],
+      "desc": "Tokyo Koto City (Japan)",
+      "geo": [
+        139.68,
+        35.68
+      ],
+      "region": "Asia",
+      "relays": [
+        {
+          "address": "45.121.184.5",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "45.121.184.6",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "45.121.184.24",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "45.121.184.25",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "45.121.184.26",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "45.121.184.27",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "vie": {
+      "aliases": [],
+      "desc": "Vienna (Austria)",
+      "geo": [
+        16.22,
+        48.12
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "146.66.155.66",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.155.67",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.155.68",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.155.69",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.155.72",
+          "port_range": [
+            27015,
+            27060
+          ]
+        },
+        {
+          "address": "146.66.155.73",
+          "port_range": [
+            27015,
+            27060
+          ]
+        }
+      ],
+      "tier": 1
+    },
+    "waw": {
+      "aliases": [],
+      "desc": "Warsaw (Poland)",
+      "geo": [
+        21.0,
+        52.22
+      ],
+      "region": "Europe",
+      "relays": [
+        {
+          "address": "155.133.230.100",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.230.101",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.230.102",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.230.117",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.230.119",
+          "port_range": [
+            27015,
+            27140
+          ]
+        },
+        {
+          "address": "155.133.230.121",
+          "port_range": [
+            27015,
+            27140
+          ]
+        }
+      ],
+      "tier": 1
+    }
+  },
+  "revision": 1793736599,
+  "schema": 1,
+  "source": "bundled"
+}
