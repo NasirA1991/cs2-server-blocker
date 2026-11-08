@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+pkg/
+*.tar.gz
+*.pkg.tar.zst
+.pytest_cache/
+.coverage
