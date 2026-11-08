@@ -12,3 +12,5 @@ packaging/src/
 packaging/pkg/
 packaging/cs2blocker/
 packaging/*.pkg.tar.zst
+packaging/staging/
+packaging/dist/

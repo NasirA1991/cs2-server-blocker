@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  packages:
+    name: Debian, RPM and tarball
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install nfpm
+        run: |
+          curl -sSL -o /tmp/nfpm.tar.gz \
+            https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz
+          sudo tar -xzf /tmp/nfpm.tar.gz -C /usr/local/bin nfpm
+          nfpm --version
+      - name: Stage files
+        run: ./packaging/install.sh --root packaging/staging --no-daemon-reload
+      - name: Build packages
+        run: |
+          mkdir -p packaging/dist
+          nfpm package --config packaging/nfpm.yaml --packager deb \
+            --target packaging/dist/cs2blocker_0.1.0-2_amd64.deb
+          nfpm package --config packaging/nfpm.yaml --packager rpm \
+            --target packaging/dist/cs2blocker-0.1.0-2.x86_64.rpm
+          git archive --format=tar.gz --prefix=cs2blocker-0.1.0/ \
+            -o packaging/dist/cs2blocker-0.1.0.tar.gz HEAD
+          (cd packaging/dist && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: packaging/dist/*
+
+  arch:
+    name: Arch package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build in Arch Linux
+        run: |
+          docker run --rm -v "$PWD":/src -w /src archlinux:latest bash -lc '
+            pacman -Syu --noconfirm --needed base-devel git python nftables polkit python-gobject python-cairo gtk4 libadwaita
+            useradd -m builder
+            chown -R builder:builder /src
+            su builder -c "cd /src/packaging && makepkg -f --nodeps"
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: packaging/cs2blocker-*.pkg.tar.zst
+
+  release:
+    name: Publish release
+    needs: [packages, arch]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create checksums
+        run: |
+          cd dist
+          rm -f SHA256SUMS
+          sha256sum * > SHA256SUMS
+          ls -lh
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --title "CS2 Server Blocker $TAG" \
+              --generate-notes
+          fi

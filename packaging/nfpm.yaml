@@ -1,0 +1,57 @@
+name: cs2blocker
+arch: amd64
+platform: linux
+version: 0.1.0
+release: "2"
+section: utils
+priority: optional
+maintainer: CS2 Server Blocker contributors <cs2blocker@localhost>
+description: |
+  Linux-native Counter-Strike 2 server blocker with an interactive world map,
+  nftables backend, CLI and systemd persistence.
+vendor: CS2 Server Blocker contributors
+homepage: https://github.com/NasirA1991/cs2-server-blocker
+license: MIT
+contents:
+  - src: packaging/staging/usr/bin/cs2blocker-gui
+    dst: /usr/bin/cs2blocker-gui
+  - src: packaging/staging/usr/bin/cs2blockctl
+    dst: /usr/bin/cs2blockctl
+  - src: packaging/staging/usr/lib/cs2blocker
+    dst: /usr/lib/cs2blocker
+  - src: packaging/staging/usr/lib/systemd/system
+    dst: /usr/lib/systemd/system
+  - src: packaging/staging/usr/share/polkit-1/actions
+    dst: /usr/share/polkit-1/actions
+  - src: packaging/staging/usr/share/applications
+    dst: /usr/share/applications
+  - src: packaging/staging/usr/share/icons
+    dst: /usr/share/icons
+  - src: packaging/staging/usr/share/man
+    dst: /usr/share/man
+  - src: packaging/staging/usr/share/licenses
+    dst: /usr/share/licenses
+scripts:
+  postinstall: packaging/scripts/postinstall.sh
+  postremove: packaging/scripts/postremove.sh
+overrides:
+  deb:
+    depends:
+      - python3
+      - nftables
+      - policykit-1
+      - systemd
+      - python3-gi
+      - python3-cairo
+      - gir1.2-gtk-4.0
+      - gir1.2-adw-1
+  rpm:
+    depends:
+      - python3
+      - nftables
+      - polkit
+      - systemd
+      - python3-gobject
+      - python3-cairo
+      - gtk4
+      - libadwaita

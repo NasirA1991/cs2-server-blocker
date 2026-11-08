@@ -1,25 +1,67 @@
 # CS2 Server Blocker for Linux
 
-Block CS2 matchmaking datacenters at the host firewall, with a GUI, a CLI, and
-rules that survive reboots. Native Steam and Flatpak Steam are equivalent,
-because the block happens in the kernel's network stack.
+[![CI](https://github.com/NasirA1991/cs2-server-blocker/actions/workflows/ci.yml/badge.svg)](https://github.com/NasirA1991/cs2-server-blocker/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/NasirA1991/cs2-server-blocker?display_name=tag)](https://github.com/NasirA1991/cs2-server-blocker/releases/latest)
+[![AUR](https://img.shields.io/aur/version/cs2blocker)](https://aur.archlinux.org/packages/cs2blocker)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Take control of your CS2 matchmaking datacenters on Linux. CS2 Server Blocker
+lets you choose which Steam Datagram Relay (SDR) datacenters the game can
+reach, visualize them on an interactive world map, monitor latency, and apply
+the result directly through nftables.
+
+- Interactive global datacenter map.
+- Per-datacenter allowed/blocked state and latency monitoring.
+- Latency-cap bulk selection with a map preview.
+- Presets and persistent firewall rules across reboots.
+- Native nftables integration with an unprivileged GUI and a small helper.
+- GTK4 GUI and a full CLI.
+
+![CS2 Server Blocker UI demo](docs/demo.gif)
 
 > **It is only a firewall rule manager.** It does not read, modify, inject into
 > or even locate the game, its files, its memory or Steam. It does not touch
 > `/etc/nftables.conf`, and it never runs `nft flush ruleset`. The only
 > nftables object it owns is the table `inet cs2blocker`.
 
-CS2 uses Valve's Steam Datagram Relay (SDR). The client measures POPs and picks
-one; blocking the relay IPs of a POP makes that POP unattractive. This tool
-fetches Valve's SDR config for appid 730, validates it, and installs a small
-nftables table with one named set and one named counter per blocked POP.
+## Quick Start
 
-![CS2 Server Blocker world map and countries sidebar](docs/screenshot.png)
+**Arch Linux / CachyOS / Manjaro**
 
-Clicking a crowded cluster opens the individual cities, each with its own
-state and ping:
+```bash
+yay -S cs2blocker
+# or: sudo pacman -U cs2blocker-0.1.0-2-any.pkg.tar.zst
+```
 
-![CS2 Server Blocker city popover](docs/screenshot-city.png)
+**Debian / Ubuntu**
+
+```bash
+sudo apt install ./cs2blocker_0.1.0-2_amd64.deb
+```
+
+**Fedora / RHEL-compatible**
+
+```bash
+sudo dnf install ./cs2blocker-0.1.0-2.x86_64.rpm
+```
+
+**From the release tarball**
+
+```bash
+tar xzf cs2blocker-0.1.0.tar.gz
+cd cs2blocker-0.1.0
+sudo ./packaging/install.sh
+```
+
+Then enable persistence and open the app:
+
+```bash
+sudo systemctl enable --now cs2blocker.service
+sudo systemctl enable --now cs2blocker-refresh.timer
+cs2blocker-gui
+```
+
+See [Download](#download) for all release artifacts and dependencies.
 
 ---
 
@@ -507,6 +549,34 @@ The continent outlines are derived from Natural Earth 1:110m land data,
 which is in the public domain (<https://www.naturalearthdata.com/about/terms-of-use/>).
 The geometry is checked in and drawn locally; the app never requests map tiles.
 No online map service is contacted.
+
+## Download
+
+Release artifacts:
+
+| Format | Use |
+| --- | --- |
+| `.pkg.tar.zst` | Arch Linux, CachyOS, Manjaro |
+| `.deb` | Debian, Ubuntu, Linux Mint |
+| `.rpm` | Fedora, RHEL-compatible |
+| `.tar.gz` | Any distro; run `packaging/install.sh` |
+| AUR `cs2blocker` | `yay -S cs2blocker` |
+
+[Download the latest release](https://github.com/NasirA1991/cs2-server-blocker/releases/latest).
+
+AppImage and Flatpak are intentionally not provided: they cannot install the
+root helper, polkit action and systemd units required to manage the host
+firewall. See the packaging notes below for the reason.
+
+## Roadmap
+
+- [x] Interactive world map with per-datacenter state.
+- [x] Latency-cap bulk selection with map preview.
+- [x] Archived release artifacts and CI.
+- [ ] Latency-based automatic selection as a first-class periodic mode.
+- [ ] Optional latency trend history.
+- [ ] Export/import presets.
+- [ ] GUI-accessible diagnostics and recovery flow.
 
 ## License
 
