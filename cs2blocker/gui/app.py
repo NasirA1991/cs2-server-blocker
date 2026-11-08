@@ -21,7 +21,8 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from .. import __version__
 from ..core.config import default_config, load_config
-from ..core.model import Mode, SdrSnapshot
+from ..core.model import Mode, SdrSnapshot, Selection
+from ..core.ruleset import build_plan
 from ..core.ping import PingResult, ping, pop_ping_target, rtt_text
 from ..core.presets import resolve_preset
 from ..core.regions import REGION_ORDER, group_pops
@@ -111,6 +112,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.rules_row = Adw.ActionRow(title="Firewall rules", subtitle="checking…")
         self.cache_row = Adw.ActionRow(title="Relay list", subtitle="checking…")
         self.monitor_row = Adw.ActionRow(title="Live counters", subtitle="checking…")
+        self.warning_row = Adw.ActionRow(title="Selection check", subtitle="")
         self.persistence_row = Adw.ActionRow(
             title="Boot persistence",
             subtitle="Apply the saved selection at boot",
@@ -121,6 +123,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         status_group.add(self.rules_row)
         status_group.add(self.cache_row)
         status_group.add(self.monitor_row)
+        status_group.add(self.warning_row)
         status_group.add(self.persistence_row)
         self.preferences.add(status_group)
 
@@ -229,6 +232,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 suffix = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
                 suffix.append(ping_label)
                 suffix.append(counter_label)
+                drops = Gtk.Label(label="drops", xalign=0.0)
+                drops.add_css_class("dim-label")
+                suffix.append(drops)
                 row.add_suffix(suffix)
                 expander.add_row(row)
                 self.pop_rows[pop.code] = (check, ping_label, counter_label, row)
@@ -334,6 +340,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             )
             if cache.get("stale"):
                 cache_text += " · STALE"
+            last_refresh = state.get("last_refresh_at")
+            if last_refresh:
+                cache_text += f" · refreshed {human_age(last_refresh)}"
             self.cache_row.set_subtitle(cache_text)
         else:
             self.cache_row.set_subtitle(
@@ -349,8 +358,15 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         else:
             self.monitor_row.set_subtitle("No live status yet (monitor not running)")
         self._update_counters()
+        self._update_selection_warnings()
         self._update_persistence_view()
         self._update_banner()
+        summary = state.get("relay_list_summary")
+        last_refresh = state.get("last_refresh_at")
+        if state.get("relay_list_changed") and last_refresh and last_refresh != getattr(self, "_seen_refresh", None):
+            self._seen_refresh = last_refresh
+            if not self.smoke_test:
+                self._toast(f"Relay list changed: {summary or 'new Valve data'}")
 
     def _update_banner(self) -> None:
         state = self._state
@@ -381,6 +397,23 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.banner.set_revealed(True)
             return
         self.banner.set_revealed(False)
+
+    def _update_selection_warnings(self) -> None:
+        try:
+            selection = Selection(
+                mode=self.mode,
+                pops=frozenset(self._selected_from_checks()),
+            )
+            plan = build_plan(self.snapshot, selection)
+        except Exception as exc:
+            self.warning_row.set_subtitle(str(exc))
+            return
+        if plan.warnings:
+            self.warning_row.set_subtitle("; ".join(plan.warnings))
+            self.warning_row.add_css_class("warning")
+        else:
+            self.warning_row.set_subtitle("No selection warnings")
+            self.warning_row.remove_css_class("warning")
 
     def _update_counters(self) -> None:
         live = self._live or {}
@@ -449,6 +482,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             expander = self.region_expanders.get(region.value)
             if expander is not None:
                 expander.set_subtitle(self._region_subtitle(region))
+        self._update_selection_warnings()
         self._update_buttons()
 
     def _mode_changed(self, dropdown: Gtk.DropDown, _pspec) -> None:
@@ -460,6 +494,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             if self.mode is Mode.ONLY
             else "Block the selected POPs"
         )
+        self._update_selection_warnings()
 
     def _preset_changed(self, dropdown: Gtk.DropDown, _pspec) -> None:
         if self._loading or self._loading_presets:
@@ -484,6 +519,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         )
         self.selected = set(codes)
         self._loading = False
+        self._update_selection_warnings()
         dropdown.set_selected(0)
         self.status_label.set_text(f"Loaded preset “{preset.name}” — press Apply")
         for warning in warnings:

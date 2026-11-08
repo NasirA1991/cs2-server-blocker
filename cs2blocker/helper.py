@@ -486,6 +486,10 @@ def status_command(paths: Paths, args: argparse.Namespace) -> int:
         print(f"last refresh: {human_age(last_refresh)}")
     if state.get("refresh_error"):
         print(f"last refresh error: {state['refresh_error']}")
+    if state.get("relay_list_changed"):
+        print(f"relay list changed: {state.get('relay_list_summary', 'yes')}")
+    for warning in state.get("warnings", []) or []:
+        print(f"warning: {warning}")
     if state.get("error"):
         print(f"last apply error: {state['error']}")
     print(
