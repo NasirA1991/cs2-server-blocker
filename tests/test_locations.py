@@ -1,7 +1,7 @@
 import unittest
 
 from cs2blocker.core.sdr import load_bundled
-from cs2blocker.gui.locations import parse_location
+from cs2blocker.gui.locations import normalize_geo, parse_location
 
 
 class LocationTests(unittest.TestCase):
@@ -34,6 +34,18 @@ class LocationTests(unittest.TestCase):
         loc = parse_location(self.snapshot.pops["pekm"])
         self.assertEqual(loc.title, "Beijing, China")
         self.assertIn("Mobile", loc.subtitle)
+
+    def test_partner_coordinates_use_longitude_latitude_order(self):
+        # Valve's partner POPs sometimes publish (latitude, longitude).
+        # Country references let the map pick the correct orientation.
+        self.assertEqual(normalize_geo((51.51, 0.12), (-0.13, 51.51)), (0.12, 51.51))
+        self.assertEqual(normalize_geo((50.11, 8.68), (8.68, 50.12)), (8.68, 50.11))
+        self.assertEqual(normalize_geo((48.21, 16.36), (16.22, 48.12)), (16.36, 48.21))
+        # Already-correct partner coordinates must not be flipped.
+        self.assertEqual(
+            normalize_geo((56.3414, 25.1164), (55.3, 25.25)),
+            (56.3414, 25.1164),
+        )
 
 
 if __name__ == "__main__":

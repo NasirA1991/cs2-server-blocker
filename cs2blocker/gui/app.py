@@ -12,6 +12,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
+from statistics import median
 from typing import Any, Callable
 
 import gi
@@ -31,7 +32,7 @@ from ..core.ruleset import build_plan
 from ..core.sdr import load_bundled, load_snapshot_file
 from ..core.state import Paths, read_optional_json
 from ..core.util import Cs2BlockerError, format_ranges, human_age, merge_ranges, which_fixed
-from .locations import parse_location
+from .locations import normalize_geo, parse_location
 from .worldmap import MapEntry, WorldMap
 
 INSTALLED_HELPER = Path("/usr/lib/cs2blocker/cs2blocker-helper")
@@ -184,11 +185,31 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._build_entries()
 
     def _build_entries(self) -> None:
-        entries: list[MapEntry] = []
+        preliminary: list[tuple[Any, Any, str, str, str, tuple[float, float]]] = []
+        primary_by_country: dict[str, list[tuple[float, float]]] = defaultdict(list)
         for pop in self.snapshot.pops.values():
             if not pop.relays or not pop.geo:
                 continue
             location = parse_location(pop)
+            country = location.country or "Unknown"
+            raw = (float(pop.geo[0]), float(pop.geo[1]))
+            preliminary.append((pop, location, country, raw, "", ""))
+            # Most Valve POPs publish (longitude, latitude), but some partner
+            # POPs publish the pair reversed. Build a median from the normal
+            # POPs in the same country so we can pick the sane orientation.
+            if not pop.name.startswith("Datapacket"):
+                primary_by_country[country].append(raw)
+        references = {
+            country: (median(x for x, _ in coords), median(y for _, y in coords))
+            for country, coords in primary_by_country.items()
+            if coords
+        }
+
+        entries: list[MapEntry] = []
+        for pop, location, country, raw, _unused1, _unused2 in preliminary:
+            lon, lat = normalize_geo(raw, references.get(country))
+            if not (-180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0):
+                continue
             ports = format_ranges(merge_ranges((r.port_start, r.port_end) for r in pop.relays))
             entries.append(
                 MapEntry(
@@ -196,11 +217,11 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     title=location.title,
                     subtitle=location.subtitle,
                     region=pop.region,
-                    lon=float(pop.geo[0]),
-                    lat=float(pop.geo[1]),
+                    lon=lon,
+                    lat=lat,
                     relays=pop.relay_count,
                     ports=ports,
-                    country=location.country or "Unknown",
+                    country=country,
                 )
             )
         entries.sort(key=lambda e: (REGION_ORDER.index(e.region) if e.region in REGION_ORDER else 99, e.code))

@@ -138,6 +138,33 @@ The GUI can toggle the same units from its **Settings** menu. The
 monitor service is pulled in by `cs2blocker.service`; do not enable it
 separately.
 
+### Will it work on another distro?
+
+It is not tied to `ufw`. The helper talks to nftables directly and owns only
+the `inet cs2blocker` table. `ufw` and `firewalld` can stay enabled: their
+normal reloads do not remove this table. If something explicitly runs
+`nft flush ruleset`, re-apply with `sudo cs2blockctl apply`.
+
+| System | Status |
+| --- | --- |
+| Arch / CachyOS / Manjaro | Native PKGBUILD and the generic installer; tested here. |
+| Debian / Ubuntu / Fedora / openSUSE | Use `packaging/install.sh` and install the dependencies listed above. `.deb`/`.rpm` files are not built yet. |
+| Artix / Void / Alpine / non-systemd | Helper and CLI work; use an init script/cron. Boot persistence and the weekly timer require systemd; see [Non-systemd systems](#non-systemd-systems). |
+| Windows / macOS | Not supported; this is a Linux netfilter tool. |
+
+The only hard requirements are Linux with nftables (or `iptables` + `ipset` as
+a fallback), Python 3.11+, and root only for apply/clear/refresh. The GUI also
+needs GTK4, libadwaita, PyGObject and `python-cairo`. If no polkit agent is
+running, the GUI prints the exact `sudo` fallback; the CLI works with
+`sudo cs2blockctl ...`.
+
+Run the built-in check on any machine:
+
+```bash
+cs2blockctl doctor
+sudo cs2blockctl doctor   # also checks the kernel/backend
+```
+
 ### Debian/RPM packages
 
 `.deb` and `.rpm` packages are not built in this pass. The planned path is

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 
@@ -110,6 +111,37 @@ def parse_location(pop: Pop) -> Location:
         region=pop.region,
         code=pop.code,
     )
+
+
+def _geo_distance_squared(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Rough distance in degrees, longitude scaled by latitude."""
+    dlon = (a[0] - b[0]) * math.cos(math.radians((a[1] + b[1]) / 2.0))
+    dlat = a[1] - b[1]
+    return dlon * dlon + dlat * dlat
+
+
+def normalize_geo(
+    geo: tuple[float, float], reference: tuple[float, float] | None = None
+) -> tuple[float, float]:
+    """Return ``geo`` as (longitude, latitude).
+
+    Some partner POPs in Valve's SDR feed publish (latitude, longitude)
+    instead of the usual (longitude, latitude). If a country reference is
+    available, pick the orientation that is geographically closer to it.
+    """
+    lon, lat = float(geo[0]), float(geo[1])
+    candidate = (lon, lat)
+    alt = (lat, lon)
+
+    def valid(pair: tuple[float, float]) -> bool:
+        return -180.0 <= pair[0] <= 180.0 and -90.0 <= pair[1] <= 90.0
+
+    if not valid(candidate):
+        return alt if valid(alt) else candidate
+    if reference is not None and valid(alt):
+        if _geo_distance_squared(alt, reference) < _geo_distance_squared(candidate, reference):
+            return alt
+    return candidate
 
 
 def display_title(pop: Pop) -> str:
