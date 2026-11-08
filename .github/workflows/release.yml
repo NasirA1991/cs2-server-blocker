@@ -26,11 +26,11 @@ jobs:
         run: |
           mkdir -p packaging/dist
           nfpm package --config packaging/nfpm.yaml --packager deb \
-            --target packaging/dist/cs2blocker_0.1.1-1_amd64.deb
+            --target packaging/dist/cs2blocker_0.1.2-1_amd64.deb
           nfpm package --config packaging/nfpm.yaml --packager rpm \
-            --target packaging/dist/cs2blocker-0.1.1-1.x86_64.rpm
-          git archive --format=tar.gz --prefix=cs2blocker-0.1.1/ \
-            -o packaging/dist/cs2blocker-0.1.1.tar.gz HEAD
+            --target packaging/dist/cs2blocker-0.1.2-1.x86_64.rpm
+          git archive --format=tar.gz --prefix=cs2blocker-0.1.2/ \
+            -o packaging/dist/cs2blocker-0.1.2.tar.gz HEAD
           (cd packaging/dist && sha256sum * > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:

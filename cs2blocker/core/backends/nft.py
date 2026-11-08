@@ -89,7 +89,7 @@ class NftBackend(Backend):
             plan,
             revision=plan.revision,
             replace_strategy=strategy,
-            version="0.1.1",
+            version="0.1.2",
             generated_at=utc_now(),
         )
         check = self._run([self._nft(), "-c", "-f", "-"], input_text=text, timeout=30.0)
@@ -125,7 +125,7 @@ class NftBackend(Backend):
                 relay_count=0,
                 message="no nft table to remove",
             )
-        text = render_clear(replace_strategy=strategy, version="0.1.1", generated_at=utc_now())
+        text = render_clear(replace_strategy=strategy, version="0.1.2", generated_at=utc_now())
         result = self._run([self._nft(), "-f", "-"], input_text=text, timeout=30.0)
         if not result.ok:
             raise BackendError(

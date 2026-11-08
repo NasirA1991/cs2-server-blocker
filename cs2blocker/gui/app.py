@@ -145,6 +145,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.sidebar_page: Adw.PreferencesPage | None = None
         self.country_widgets: dict[str, CountrySidebar] = {}
         self.continent_widgets: dict[Region, ContinentSidebar] = {}
+        self.continent_rows: dict[Region, list[Gtk.Widget]] = {}
+        self.continent_chevrons: dict[Region, Gtk.Button] = {}
+        self.collapsed_regions: set[Region] = set(REGION_ORDER)
         self._updating_sidebar = False
         self._block_new_loading = False
         self.ping_cap: float | None = 80.0
@@ -764,6 +767,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._update_block_new_view()
         self._loading = False
         self.map.set_ping_cap(self.ping_cap)
+        self._expand_region_for(self.focus_code)
         self.map.set_data(
             self.entries,
             selected=self.selected,
@@ -982,6 +986,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         page = Adw.PreferencesPage()
         self.country_widgets.clear()
         self.continent_widgets.clear()
+        self.continent_rows.clear()
+        self.continent_chevrons.clear()
         any_group = False
 
         for region in REGION_ORDER:
@@ -1032,6 +1038,13 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 f"Check to allow every {region.value} datacenter; uncheck to block them"
             )
             continent_check.connect("toggled", self._continent_toggled, region)
+            collapse_button = Gtk.Button.new_from_icon_name("pan-down-symbolic")
+            collapse_button.add_css_class("flat")
+            collapse_button.set_valign(Gtk.Align.CENTER)
+            collapse_button.set_tooltip_text(f"Collapse {region.value}")
+            collapse_button.connect(
+                "clicked", self._continent_collapse_clicked, region
+            )
             continent_count = Gtk.Label(label="")
             continent_count.add_css_class("footer")
             allow_button = Gtk.Button(label="Allow all")
@@ -1045,6 +1058,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             block_button.set_tooltip_text(f"Block every {region.value} datacenter")
             block_button.connect("clicked", lambda _b, r=region: self._set_region_allowed(r, False))
             continent_row.add_prefix(continent_check)
+            continent_row.add_prefix(collapse_button)
             continent_row.add_suffix(continent_count)
             continent_row.add_suffix(allow_button)
             continent_row.add_suffix(block_button)
@@ -1064,6 +1078,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 check=continent_check,
                 count_label=continent_count,
             )
+            self.continent_chevrons[region] = collapse_button
+            self.continent_rows[region] = []
 
             for country, country_entries in filtered:
                 if self.sort_by_ping:
@@ -1102,6 +1118,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     row.add_suffix(ping_label)
                     row.add_suffix(drop_label)
                     group.add(row)
+                    self.continent_rows[region].append(row)
                     widget = CountrySidebar(
                         country=country,
                         entries=(entry,),
@@ -1169,7 +1186,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     widget.server_drops[entry.code] = drop_label
                     widget.server_states[entry.code] = state_label
                 group.add(expander)
+                self.continent_rows[region].append(expander)
                 self.country_widgets[country] = widget
+            self._apply_continent_visibility(region, force=bool(query))
             page.add(group)
 
         if not any_group:
@@ -1267,6 +1286,37 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             )
         finally:
             self._updating_sidebar = False
+
+    def _continent_collapse_clicked(
+        self, _button: Gtk.Button, region: Region
+    ) -> None:
+        if region in self.collapsed_regions:
+            self.collapsed_regions.remove(region)
+        else:
+            self.collapsed_regions.add(region)
+        self._apply_continent_visibility(region)
+
+    def _apply_continent_visibility(self, region: Region, *, force: bool = False) -> None:
+        collapsed = region in self.collapsed_regions and not force
+        for row in self.continent_rows.get(region, []):
+            row.set_visible(not collapsed)
+        button = self.continent_chevrons.get(region)
+        if button is not None:
+            button.set_icon_name(
+                "pan-end-symbolic" if collapsed else "pan-down-symbolic"
+            )
+            button.set_tooltip_text(
+                f"Expand {region.value}" if collapsed else f"Collapse {region.value}"
+            )
+
+    def _expand_region_for(self, code: str | None) -> None:
+        if not code:
+            return
+        entry = self.entry_by_code.get(code)
+        if entry is None or entry.region not in self.collapsed_regions:
+            return
+        self.collapsed_regions.discard(entry.region)
+        self._apply_continent_visibility(entry.region)
 
     def _search_changed(self, entry: Gtk.SearchEntry) -> None:
         self.search_query = entry.get_text().strip()
@@ -1466,6 +1516,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
     def _focus_pop(self, code: str | None) -> None:
         self.focus_code = code
+        self._expand_region_for(code)
         self.map.set_focus(code)
         self._update_detail()
         self._update_buttons()
@@ -1538,6 +1589,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._set_codes_allowed(codes, not all_allowed)
         if not all_allowed:
             self.focus_code = codes[0]
+            self._expand_region_for(self.focus_code)
         self._pending_changed()
 
     def _pending_changed(self) -> None:
@@ -1586,6 +1638,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.selected = set(codes)
         self._update_block_new_view()
         self.focus_code = next((code for code in sorted(codes) if code in self.entry_by_code), None)
+        self._expand_region_for(self.focus_code)
         if preset.regions:
             self.map.zoom_to_region(preset.regions[0])
         elif codes:

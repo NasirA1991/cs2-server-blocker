@@ -30,26 +30,26 @@ the result directly through nftables.
 
 ```bash
 yay -S cs2blocker
-# or: sudo pacman -U cs2blocker-0.1.1-1-any.pkg.tar.zst
+# or: sudo pacman -U cs2blocker-0.1.2-1-any.pkg.tar.zst
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./cs2blocker_0.1.1-1_amd64.deb
+sudo apt install ./cs2blocker_0.1.2-1_amd64.deb
 ```
 
 **Fedora / RHEL-compatible**
 
 ```bash
-sudo dnf install ./cs2blocker-0.1.1-1.x86_64.rpm
+sudo dnf install ./cs2blocker-0.1.2-1.x86_64.rpm
 ```
 
 **From the release tarball**
 
 ```bash
-tar xzf cs2blocker-0.1.1.tar.gz
-cd cs2blocker-0.1.1
+tar xzf cs2blocker-0.1.2.tar.gz
+cd cs2blocker-0.1.2
 sudo ./packaging/install.sh
 ```
 
@@ -73,8 +73,9 @@ See [Download](#download) for all release artifacts and dependencies.
   dot to block/allow it, click a cluster to open its POP list, drag to pan and
   scroll to zoom. Hover shows a compact callout. A compact inspector shows city,
   country, status, latency and drops, with relays/ports behind **Details**.
-  The sidebar has search, latency-cap bulk selection, sort by ping, continent
-  and country bulk controls, and per-POP toggles. Pending map changes get dashed
+  The sidebar has search, collapsible continent sections, latency-cap bulk
+  selection, sort by ping, continent and country bulk controls, and per-POP
+  toggles. Pending map changes get dashed
   rings and a floating Apply/Revert bar. Region chips wrap and the right panel
   collapses automatically on narrow windows. Presets set the allowed/blocked
   state, and Apply commits it through the helper.
@@ -247,8 +248,9 @@ use the map controls. Clicking a cluster opens its POP list rather than zooming.
 Selecting a dot shows the inspector; technical relay/port data is under
 **Details**.
 
-The right-hand **Datacenters** panel groups POPs by continent and country. Use
-the search box for a country, city, or POP code. Country rows merge single-POP
+The right-hand **Datacenters** panel groups POPs by continent and country.
+Continents are collapsible; the region containing the selected datacenter opens
+automatically. Use the search box for a country, city, or POP code. Country rows merge single-POP
 countries into one row; multi-POP countries expand to city rows with code
 badges. Sort by name or ping, hide zero-drop rows automatically, and use the
 visible **Allow all / Block all** buttons per continent. Right-click a continent

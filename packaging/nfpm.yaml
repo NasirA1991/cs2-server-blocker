@@ -1,7 +1,7 @@
 name: cs2blocker
 arch: amd64
 platform: linux
-version: 0.1.1
+version: 0.1.2
 release: "1"
 section: utils
 priority: optional

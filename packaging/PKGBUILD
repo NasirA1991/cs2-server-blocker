@@ -1,6 +1,6 @@
 # Maintainer: CS2 Server Blocker contributors
 pkgname=cs2blocker
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 pkgdesc="Block CS2 matchmaking datacenters with persistent nftables rules"
 arch=('any')
