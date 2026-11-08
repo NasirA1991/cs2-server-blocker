@@ -441,25 +441,42 @@ class WorldMap(Gtk.DrawingArea):
             points = [entry for entry in self.entries if entry.region is region]
             if not points:
                 continue
-            x, y = self._project(lon, lat)
-            if not (self._map_rect[0] < x < self._map_rect[0] + self._map_rect[2]):
-                continue
             blocked = sum(1 for entry in points if self._is_blocked(entry.code))
-            color = BLOCKED if blocked == len(points) else (ALLOWED if blocked == 0 else AMBER)
-            text = f"{region.value.upper()}  {blocked}/{len(points)}"
+            allowed = len(points) - blocked
+            color = ALLOWED if blocked == 0 else (BLOCKED if blocked == len(points) else AMBER)
+            name = region.value.upper()
+            count = f"{allowed} of {len(points)} allowed"
             cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
             cr.set_font_size(10.0)
-            ext = cr.text_extents(text)
-            pad = 6
-            self._rounded_rect(cr, x - pad, y - 12, ext.width + 2 * pad, 18, 6)
-            cr.set_source_rgba(0.015, 0.06, 0.10, 0.56)
+            name_width = cr.text_extents(name).width
+            cr.set_font_size(9.0)
+            count_width = cr.text_extents(count).width
+            width = max(name_width, count_width) + 14
+            height = 30.0
+            x, y = self._project(lon, lat)
+            x0 = max(
+                self._map_rect[0] + 4,
+                min(self._map_rect[0] + self._map_rect[2] - width - 4, x - width / 2),
+            )
+            y0 = max(
+                self._map_rect[1] + 4,
+                min(self._map_rect[1] + self._map_rect[3] - height - 4, y - height / 2),
+            )
+            self._rounded_rect(cr, x0, y0, width, height, 6)
+            cr.set_source_rgba(0.015, 0.06, 0.10, 0.62)
             cr.fill()
-            cr.set_source_rgba(*color, 0.62)
+            cr.set_source_rgba(*color, 0.55)
             cr.set_line_width(0.6)
             cr.stroke()
-            cr.set_source_rgba(*color, 0.9)
-            cr.move_to(x, y + 2)
-            cr.show_text(text)
+            cr.set_source_rgba(0.78, 0.88, 0.94, 0.72)
+            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            cr.set_font_size(10.0)
+            cr.move_to(x0 + 7, y0 + 12)
+            cr.show_text(name)
+            cr.set_source_rgba(*color, 0.95)
+            cr.set_font_size(9.0)
+            cr.move_to(x0 + 7, y0 + 23)
+            cr.show_text(count)
         cr.restore()
 
     def _is_blocked(self, code: str) -> bool:
