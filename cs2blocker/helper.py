@@ -583,7 +583,10 @@ def _monitor_payload(backend: Any) -> dict[str, Any]:
 
 def monitor_command(paths: Paths, args: argparse.Namespace) -> int:
     paths.ensure_dirs()
-    config = load_config(paths, require_root=False, missing_ok=True)
+    try:
+        config = load_config(paths, require_root=False, missing_ok=True)
+    except Cs2BlockerError:
+        config = None
     backend = None
     backend_error = None
     try:
