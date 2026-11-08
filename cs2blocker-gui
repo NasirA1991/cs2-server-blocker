@@ -1,0 +1,9 @@
+#!/usr/bin/python3
+"""Development launcher for the GTK4 GUI."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from cs2blocker.gui.app import main
+
+raise SystemExit(main())
