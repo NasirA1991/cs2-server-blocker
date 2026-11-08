@@ -131,7 +131,7 @@ sudo systemctl enable --now cs2blocker.service
 sudo systemctl enable --now cs2blocker-refresh.timer
 ```
 
-The GUI can toggle the same units from its **Boot persistence** switch. The
+The GUI can toggle the same units from its **Settings** menu. The
 monitor service is pulled in by `cs2blocker.service`; do not enable it
 separately.
 
@@ -257,13 +257,13 @@ selection.
 SDR matchmaking and relay measurement are UDP. Dropping the SDR UDP port range
 to a POP's relay IPs is enough to make that POP unusable, while leaving ICMP,
 Steam downloads, voice and other Valve services alone. It also keeps the GUI
-ping column meaningful: ICMP still replies while a POP is blocked.
+map ping/detail display meaningful: ICMP still replies while a POP is blocked.
 
 A netfilter `drop` in the `output` hook makes the local `sendto()` return
 `EPERM`. That is normal Linux behavior, and the game treats the relay as
 unreachable. If you ever need to block all protocols, the helper supports
-`--protocol all`; it is not the default because it is broader and kills the
-ping column.
+`--protocol all`; it is not the default because it is broader and makes the
+map ping/detail display uninformative for blocked POPs.
 
 ---
 
@@ -326,7 +326,7 @@ sudo rc-update add cs2blocker default
 **runit:** call `/usr/lib/cs2blocker/cs2blocker-helper apply` from
 `/etc/rc.local` or a oneshot service. **Refresh:** run
 `/usr/lib/cs2blocker/cs2blocker-helper refresh --timer` from cron/weekly
-scheduler. The GUI's **Boot persistence** switch and live monitor require
+scheduler. The GUI's **Settings** menu persistence control and live monitor require
 systemd; the CLI `apply`/`clear`/`refresh` still work.
 
 ---
