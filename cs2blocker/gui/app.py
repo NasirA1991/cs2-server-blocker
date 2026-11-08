@@ -303,7 +303,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             "<span foreground='#36d399'>●</span> Allowed"
         )
         hint_label = Gtk.Label(
-            label="Click to toggle · scroll to zoom · drag to pan",
+            label="Click a dot to toggle · click a bubble to zoom · drag to pan",
             xalign=0.0,
         )
         hint_label.add_css_class("dim")
