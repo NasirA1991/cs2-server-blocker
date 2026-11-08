@@ -293,7 +293,6 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         installed = self._installed()
         for button in (self.apply_button, self.unblock_button, self.refresh_button, self.save_preset_button):
             button.set_sensitive(installed and not self._busy)
-        self.persistence_switch.set_sensitive(installed and not self._busy)
         self.ping_button.set_sensitive(not self._busy)
 
     # ---------------------------------------------------------- status/counters
@@ -371,6 +370,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._update_selection_warnings()
         self._update_persistence_view()
         self._update_banner()
+        self._update_buttons()
         summary = state.get("relay_list_summary")
         last_refresh = state.get("last_refresh_at")
         if state.get("relay_list_changed") and last_refresh and last_refresh != getattr(self, "_seen_refresh", None):
@@ -722,6 +722,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
     ) -> None:
         self._busy = True
         self.spinner.start()
+        self.persistence_switch.set_sensitive(False)
         self._update_buttons()
         self.status_label.set_text("Working…")
 
@@ -782,6 +783,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._busy = False
         self.spinner.stop()
         self._update_buttons()
+        self._update_persistence_view()
         self.status_label.set_text("Ready")
         callback(result)
         return False
