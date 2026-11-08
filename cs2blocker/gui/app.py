@@ -80,6 +80,7 @@ class CountrySidebar:
     server_checks: dict[str, Gtk.CheckButton] = field(default_factory=dict)
     server_pings: dict[str, Gtk.Label] = field(default_factory=dict)
     server_drops: dict[str, Gtk.Label] = field(default_factory=dict)
+    server_states: dict[str, Gtk.Label] = field(default_factory=dict)
 
 
 @dataclass
@@ -126,6 +127,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.country_widgets: dict[str, CountrySidebar] = {}
         self.continent_widgets: dict[Region, ContinentSidebar] = {}
         self._updating_sidebar = False
+        self._block_new_loading = False
 
         self._install_css()
         self._load_data()
@@ -275,24 +277,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         content.set_vexpand(True)
 
         topbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        mode_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        mode_box.add_css_class("linked")
-        self.block_button = Gtk.ToggleButton(label="Blocklist")
-        self.block_button.set_tooltip_text(
-            "Blocklist: blocked datacenters stay blocked; all others are allowed."
-        )
-        self.only_button = Gtk.ToggleButton(label="Allowlist")
-        self.only_button.set_tooltip_text(
-            "Allowlist: allowed datacenters stay allowed; all others are blocked."
-        )
-        self.only_button.set_group(self.block_button)
-        self.block_button.set_active(True)
-        self.block_button.connect("clicked", self._mode_clicked)
-        self.only_button.connect("clicked", self._mode_clicked)
-        mode_box.append(self.block_button)
-        mode_box.append(self.only_button)
-        topbar.append(mode_box)
-
+        presets_label = Gtk.Label(label="Presets")
+        presets_label.add_css_class("dim")
+        presets_label.add_css_class("footer")
+        topbar.append(presets_label)
         self.preset_dropdown = Gtk.DropDown.new_from_strings(["Apply preset…"])
         self.preset_dropdown.set_valign(Gtk.Align.CENTER)
         self.preset_dropdown.connect("notify::selected", self._preset_changed)
@@ -518,6 +506,31 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         title.add_css_class("section-title")
         box.append(title)
 
+        policy_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        policy_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        policy_text.set_hexpand(True)
+        policy_label = Gtk.Label(
+            label="Block newly added datacenters automatically",
+            xalign=0.0,
+            wrap=True,
+        )
+        policy_label.set_max_width_chars(28)
+        self.block_new_label = Gtk.Label(label="Checking…", xalign=0.0, wrap=True)
+        self.block_new_label.add_css_class("dim")
+        self.block_new_label.add_css_class("footer")
+        policy_text.append(policy_label)
+        policy_text.append(self.block_new_label)
+        self.block_new_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.block_new_switch.set_tooltip_text(
+            "On: newly added Valve datacenters start blocked. "
+            "Off: they start allowed."
+        )
+        self.block_new_switch.connect("notify::active", self._block_new_toggled)
+        policy_row.append(policy_text)
+        policy_row.append(self.block_new_switch)
+        box.append(policy_row)
+        box.append(Gtk.Separator())
+
         persistence_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         persistence_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         persistence_text.set_hexpand(True)
@@ -561,11 +574,25 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
     def _is_blocked(self, code: str) -> bool:
         return code in self.selected if self.mode is Mode.BLOCK else code not in self.selected
 
+    def _set_codes_allowed(self, codes, allowed: bool) -> None:
+        """Set explicit allowed/blocked state while preserving the internal mode model."""
+        codes = set(codes)
+        if self.mode is Mode.BLOCK:
+            if allowed:
+                self.selected.difference_update(codes)
+            else:
+                self.selected.update(codes)
+        else:
+            if allowed:
+                self.selected.update(codes)
+            else:
+                self.selected.difference_update(codes)
+
     def _refresh_ui_from_data(self) -> None:
         self._loading = True
         self._build_preset_model()
         self._build_region_chips()
-        self._update_mode_buttons()
+        self._update_block_new_view()
         self._loading = False
         self.map.set_data(
             self.entries,
@@ -582,11 +609,19 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._update_buttons()
         self._update_status_view()
 
-    def _update_mode_buttons(self) -> None:
-        self._loading = True
-        self.block_button.set_active(self.mode is Mode.BLOCK)
-        self.only_button.set_active(self.mode is Mode.ONLY)
-        self._loading = False
+    def _update_block_new_view(self) -> None:
+        if not hasattr(self, "block_new_switch"):
+            return
+        self._block_new_loading = True
+        enabled = self.mode is Mode.ONLY
+        self.block_new_switch.set_active(enabled)
+        self.block_new_switch.set_sensitive(not self._busy)
+        self.block_new_label.set_text(
+            "On — new datacenters are blocked"
+            if enabled
+            else "Off — new datacenters are allowed"
+        )
+        self._block_new_loading = False
 
     def _build_preset_model(self) -> None:
         names = ["Apply preset…"]
@@ -675,6 +710,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             group = Adw.PreferencesGroup()
             continent_row = Adw.ActionRow(title=region.value)
             continent_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            continent_check.set_tooltip_text(
+                f"Check to allow every {region.value} datacenter; uncheck to block them"
+            )
             continent_check.connect("toggled", self._continent_toggled, region)
             continent_count = Gtk.Label(label="")
             continent_count.add_css_class("footer")
@@ -685,7 +723,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             except_button.set_icon_name("view-more-symbolic")
             except_button.add_css_class("flat")
             except_button.set_tooltip_text(
-                f"Set every {region.value} datacenter except one country"
+                f"Block every {region.value} datacenter except one country"
             )
             except_button.set_popover(self._build_except_popover(region, filtered))
             continent_row.add_suffix(except_button)
@@ -701,6 +739,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 expander = Adw.ExpanderRow(title=country)
                 expander.set_subtitle("")
                 country_check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                country_check.set_tooltip_text(
+                    f"Check to allow every datacenter in {country}; uncheck to block them"
+                )
                 country_check.connect("toggled", self._country_toggled, country)
                 country_count = Gtk.Label(label="")
                 country_count.add_css_class("footer")
@@ -724,7 +765,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     row.set_activatable(True)
                     row.connect("activated", lambda _row, code=entry.code: self._toggle_pop(code))
                     check = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+                    check.set_tooltip_text("Check to allow this datacenter; uncheck to block it")
                     check.connect("toggled", self._code_toggled, entry.code)
+                    state_label = Gtk.Label(label="", xalign=1.0)
+                    state_label.add_css_class("footer")
                     ping_label = Gtk.Label(label="—", width_chars=7, xalign=1.0)
                     ping_label.add_css_class("footer")
                     ping_label.add_css_class("dim")
@@ -732,12 +776,14 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                     drop_label.add_css_class("footer")
                     drop_label.add_css_class("dim")
                     row.add_prefix(check)
+                    row.add_suffix(state_label)
                     row.add_suffix(ping_label)
                     row.add_suffix(drop_label)
                     expander.add_row(row)
                     widget.server_checks[entry.code] = check
                     widget.server_pings[entry.code] = ping_label
                     widget.server_drops[entry.code] = drop_label
+                    widget.server_states[entry.code] = state_label
                 group.add(expander)
                 self.country_widgets[country] = widget
             page.add(group)
@@ -763,7 +809,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         outer.set_margin_bottom(10)
         outer.set_margin_start(10)
         outer.set_margin_end(10)
-        title = Gtk.Label(label=f"Set every {region.value} datacenter except…", xalign=0.0)
+        title = Gtk.Label(label=f"Block every {region.value} datacenter except…", xalign=0.0)
         title.add_css_class("section-title")
         outer.append(title)
         scrolled = Gtk.ScrolledWindow()
@@ -778,7 +824,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             button.connect(
                 "clicked",
                 lambda _button, c=country: (
-                    self._set_all_except(region, c),
+                    self._block_all_except(region, c),
                     popover.popdown(),
                 ),
             )
@@ -788,15 +834,15 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         popover.set_child(outer)
         return popover
 
-    def _set_all_except(self, region: Region, country: str) -> None:
+    def _block_all_except(self, region: Region, country: str) -> None:
         region_codes = {entry.code for entry in self.entries if entry.region is region}
         except_codes = {
             entry.code
             for entry in self.entries
             if entry.region is region and entry.country == country
         }
-        self.selected.difference_update(region_codes)
-        self.selected.update(region_codes - except_codes)
+        self._set_codes_allowed(region_codes, False)
+        self._set_codes_allowed(except_codes, True)
         self.focus_code = next(
             (entry.code for entry in self.entries if entry.code in region_codes - except_codes),
             None,
@@ -810,14 +856,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._updating_sidebar = True
         try:
             for widget in self.country_widgets.values():
-                codes = [entry.code for entry in widget.entries]
-                selected = sum(1 for code in codes if code in self.selected)
-                total = len(codes)
-                widget.check.set_active(selected == total and total > 0)
-                widget.check.set_inconsistent(0 < selected < total)
+                total = len(widget.entries)
                 allowed = sum(
                     1 for entry in widget.entries if not self._is_blocked(entry.code)
                 )
+                widget.check.set_active(allowed == total and total > 0)
+                widget.check.set_inconsistent(0 < allowed < total)
                 color = (
                     "#36d399"
                     if allowed == total and total > 0
@@ -831,21 +875,28 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 )
                 widget.expander.set_subtitle("")
                 for code, check in widget.server_checks.items():
-                    check.set_active(code in self.selected)
+                    blocked = self._is_blocked(code)
+                    check.set_active(not blocked)
+                    state = widget.server_states.get(code)
+                    if state is not None:
+                        state.set_text("Blocked" if blocked else "Allowed")
+                        state.remove_css_class("state-blocked")
+                        state.remove_css_class("state-allowed")
+                        state.add_css_class(
+                            "state-blocked" if blocked else "state-allowed"
+                        )
                     ping = self.pings.get(code)
                     widget.server_pings[code].set_text(
                         "—" if ping is None else f"{ping:.0f} ms"
                     )
                     widget.server_drops[code].set_text(str(self.counters.get(code, 0)))
             for widget in self.continent_widgets.values():
-                codes = [entry.code for entry in widget.entries]
-                selected = sum(1 for code in codes if code in self.selected)
-                total = len(codes)
-                widget.check.set_active(selected == total and total > 0)
-                widget.check.set_inconsistent(0 < selected < total)
+                total = len(widget.entries)
                 allowed = sum(
                     1 for entry in widget.entries if not self._is_blocked(entry.code)
                 )
+                widget.check.set_active(allowed == total and total > 0)
+                widget.check.set_inconsistent(0 < allowed < total)
                 color = (
                     "#36d399"
                     if allowed == total and total > 0
@@ -873,10 +924,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         if self._updating_sidebar:
             return
         codes = [entry.code for entry in self.entries if entry.region is region]
-        if check.get_active():
-            self.selected.update(codes)
-        else:
-            self.selected.difference_update(codes)
+        self._set_codes_allowed(codes, check.get_active())
         self._pending_changed()
 
     def _country_toggled(self, check: Gtk.CheckButton, country: str) -> None:
@@ -886,36 +934,26 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         if widget is None:
             return
         codes = [entry.code for entry in widget.entries]
-        if check.get_active():
-            self.selected.update(codes)
-        else:
-            self.selected.difference_update(codes)
+        self._set_codes_allowed(codes, check.get_active())
         self._pending_changed()
 
     def _code_toggled(self, check: Gtk.CheckButton, code: str) -> None:
         if self._updating_sidebar:
             return
-        if check.get_active():
-            self.selected.add(code)
-        else:
-            self.selected.discard(code)
+        self._set_codes_allowed([code], check.get_active())
         self.focus_code = code
         self._pending_changed()
 
     def _allow_all(self) -> None:
-        codes = [entry.code for entry in self.entries]
-        if self.mode is Mode.BLOCK:
-            self.selected.difference_update(codes)
-        else:
-            self.selected.update(codes)
+        self._set_codes_allowed(
+            [entry.code for entry in self.entries], True
+        )
         self._pending_changed()
 
     def _block_all(self) -> None:
-        codes = [entry.code for entry in self.entries]
-        if self.mode is Mode.BLOCK:
-            self.selected.update(codes)
-        else:
-            self.selected.difference_update(codes)
+        self._set_codes_allowed(
+            [entry.code for entry in self.entries], False
+        )
         self._pending_changed()
 
     def _allowed_count(self) -> int:
@@ -1043,13 +1081,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         if self.sidebar_page is not None:
             self.sidebar_page.set_sensitive(not self._busy)
         self.persistence_switch.set_sensitive(installed and not self._busy)
+        self.block_new_switch.set_sensitive(not self._busy)
 
     # --------------------------------------------------------------- actions
     def _toggle_pop(self, code: str) -> None:
-        if code in self.selected:
-            self.selected.remove(code)
-        else:
-            self.selected.add(code)
+        blocked = self._is_blocked(code)
+        self._set_codes_allowed([code], blocked)
         self.focus_code = code
         self._pending_changed()
 
@@ -1118,12 +1155,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         codes = [entry.code for entry in self.entries if entry.region is region]
         if not codes:
             return
-        if all(code in self.selected for code in codes):
-            self.selected.difference_update(codes)
-        else:
-            self.selected.update(codes)
+        all_allowed = all(not self._is_blocked(code) for code in codes)
+        self._set_codes_allowed(codes, not all_allowed)
+        if not all_allowed:
             self.focus_code = codes[0]
-            self.map.zoom_to_region(region)
         self._pending_changed()
 
     def _pending_changed(self) -> None:
@@ -1135,18 +1170,26 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._update_selection_warnings()
         self._update_buttons()
 
-    def _mode_clicked(self, button: Gtk.ToggleButton) -> None:
-        if self._loading:
+    def _block_new_toggled(self, switch: Gtk.Switch, _pspec) -> None:
+        if self._loading or self._block_new_loading or self._busy:
             return
-        if not button.get_active():
-            # Clicking the already-active half should not leave both empty.
-            button.set_active(True)
+        desired = Mode.ONLY if switch.get_active() else Mode.BLOCK
+        if desired is self.mode:
             return
-        mode = Mode.BLOCK if button is self.block_button else Mode.ONLY
-        if mode is self.mode:
-            return
-        self.mode = mode
+        # Only visible datacenters participate in the explicit state; POPs
+        # without relay endpoints cannot be shown or toggled in the GUI.
+        known = {entry.code for entry in self.entries}
+        blocked = {code for code in known if self._is_blocked(code)}
+        allowed = known - blocked
+        self.mode = desired
+        self.selected = set(allowed) if desired is Mode.ONLY else set(blocked)
+        self._update_block_new_view()
         self._pending_changed()
+        self._toast(
+            "New datacenters will be blocked after Apply"
+            if desired is Mode.ONLY
+            else "New datacenters will be allowed after Apply"
+        )
 
     def _preset_changed(self, dropdown: Gtk.DropDown, _pspec) -> None:
         if self._loading:
@@ -1161,7 +1204,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         codes, warnings = resolve_preset(preset, self.snapshot)
         self.mode = preset.mode
         self.selected = set(codes)
-        self._update_mode_buttons()
+        self._update_block_new_view()
         self.focus_code = next((code for code in sorted(codes) if code in self.entry_by_code), None)
         if preset.regions:
             self.map.zoom_to_region(preset.regions[0])
@@ -1215,7 +1258,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
     def _revert_clicked(self) -> None:
         self.mode = self.applied_mode
         self.selected = set(self.applied_selection)
-        self._update_mode_buttons()
+        self._update_block_new_view()
         self.map.set_selection(self.selected, self.mode)
         self._update_stats()
         self._update_sidebar_selection()
@@ -1240,7 +1283,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.applied_mode = Mode.BLOCK
             self.applied_selection = set()
             self.focus_code = None
-            self._update_mode_buttons()
+            self._update_block_new_view()
             self.map.set_data(
                 self.entries,
                 selected=self.selected,
