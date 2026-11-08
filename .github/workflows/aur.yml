@@ -49,29 +49,37 @@ jobs:
           test -n "$TAG"
           docker run --rm \
             -e TAG="$TAG" \
-            -e GIT_SSH_COMMAND="ssh -i /root/.ssh/aur_key -o UserKnownHostsFile=/root/.ssh/known_hosts" \
             -v "$PWD:/src" \
             -v "$HOME/.ssh/aur_key:/root/.ssh/aur_key:ro" \
             -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
             archlinux:latest bash -lc '
               set -euo pipefail
               pacman -Syu --noconfirm --needed base-devel git openssh
-              VERSION="${TAG#v}"
+              useradd -m builder
+              install -d -o builder -g builder /home/builder/.ssh
+              cp /root/.ssh/aur_key /home/builder/.ssh/aur_key
+              cp /root/.ssh/known_hosts /home/builder/.ssh/known_hosts
+              chown builder:builder /home/builder/.ssh/aur_key /home/builder/.ssh/known_hosts
+              chmod 600 /home/builder/.ssh/aur_key
               rm -rf /tmp/aur-cs2blocker
-              git clone ssh://aur@aur.archlinux.org/cs2blocker.git /tmp/aur-cs2blocker
-              cd /tmp/aur-cs2blocker
-              cp /src/packaging/aur/PKGBUILD PKGBUILD
-              cp /src/packaging/aur/cs2blocker.install cs2blocker.install
-              sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
-              sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-              makepkg --printsrcinfo > .SRCINFO
-              git config user.name "NasirA1991"
-              git config user.email "cs2blocker@localhost"
-              git add PKGBUILD cs2blocker.install .SRCINFO
-              if git diff --cached --quiet; then
-                echo "AUR already up to date for ${VERSION}"
-                exit 0
-              fi
-              git commit -m "Update to ${VERSION}"
-              git push origin master
+              TAG="$TAG" su builder -c "
+                set -euo pipefail
+                export GIT_SSH_COMMAND=\"ssh -i /home/builder/.ssh/aur_key -o UserKnownHostsFile=/home/builder/.ssh/known_hosts\"
+                git clone ssh://aur@aur.archlinux.org/cs2blocker.git /tmp/aur-cs2blocker
+                cd /tmp/aur-cs2blocker
+                cp /src/packaging/aur/PKGBUILD PKGBUILD
+                cp /src/packaging/aur/cs2blocker.install cs2blocker.install
+                sed -i \"s/^pkgver=.*/pkgver=\${TAG#v}/\" PKGBUILD
+                sed -i \"s/^pkgrel=.*/pkgrel=1/\" PKGBUILD
+                makepkg --printsrcinfo > .SRCINFO
+                git config user.name NasirA1991
+                git config user.email cs2blocker@localhost
+                git add PKGBUILD cs2blocker.install .SRCINFO
+                if git diff --cached --quiet; then
+                  echo \"AUR already up to date for \${TAG#v}\"
+                  exit 0
+                fi
+                git commit -m \"Update to \${TAG#v}\"
+                git push origin master
+              "
             '
