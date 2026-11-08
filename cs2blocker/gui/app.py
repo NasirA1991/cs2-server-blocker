@@ -126,6 +126,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.cache_row = Adw.ActionRow(title="Relay list", subtitle="checking…")
         self.monitor_row = Adw.ActionRow(title="Live counters", subtitle="checking…")
         self.warning_row = Adw.ActionRow(title="Selection check", subtitle="")
+        self.ping_note_row = Adw.ActionRow(
+            title="Ping",
+            subtitle="ICMP stays reachable by design; dropped SDR UDP shows in the counters",
+        )
         self.persistence_row = Adw.ActionRow(
             title="Boot persistence",
             subtitle="Apply the saved selection at boot",
@@ -136,6 +140,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         status_group.add(self.rules_row)
         status_group.add(self.cache_row)
         status_group.add(self.monitor_row)
+        status_group.add(self.ping_note_row)
         status_group.add(self.warning_row)
         status_group.add(self.persistence_row)
         self.preferences.add(status_group)
