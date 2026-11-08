@@ -67,7 +67,7 @@ class ConfigTests(unittest.TestCase):
         snapshot = load_bundled()
         presets = load_default_presets()
         codes, warnings = resolve_preset(presets["eu_only"], snapshot)
-        self.assertEqual(len(codes), 15)
+        self.assertEqual(len(codes), 12)
         self.assertEqual(warnings, ())
         self.assertIn("ams", codes)
         self.assertNotIn("atl", codes)

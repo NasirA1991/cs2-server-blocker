@@ -73,7 +73,11 @@ def resolve_preset(preset: Preset, snapshot: SdrSnapshot) -> tuple[frozenset[str
         warnings.append(
             f"preset {preset.key} references unknown POP(s): {', '.join(sorted(unknown))}"
         )
-    return frozenset(codes & snapshot.pop_codes()), tuple(warnings)
+    # POPs without relay endpoints are harmless but produce noise in the UI;
+    # presets resolve to the POPs that can actually be affected today.
+    return frozenset(
+        code for code in (codes & snapshot.pop_codes()) if snapshot.pops[code].relays
+    ), tuple(warnings)
 
 
 def preset_for_selection(
