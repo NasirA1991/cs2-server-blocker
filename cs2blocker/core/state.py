@@ -84,11 +84,21 @@ class Paths:
             (self.state_dir, 0o755),
             (self.run_dir, 0o755),
         ):
-            directory.mkdir(parents=True, exist_ok=True)
             try:
-                os.chmod(directory, mode)
-            except PermissionError:
-                pass
+                directory.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                # A read-only bind mount (systemd ProtectSystem) is fine if
+                # the directory already exists; only fail if it is missing.
+                if not directory.is_dir():
+                    raise
+            try:
+                if stat.S_IMODE(directory.stat().st_mode) != mode:
+                    os.chmod(directory, mode)
+            except OSError:
+                # EROFS on /etc or /var is expected for the monitor unit,
+                # which only needs /run; an existing directory is enough.
+                if not directory.is_dir():
+                    raise
 
     @staticmethod
     def bundled_snapshot(appid: int = 730) -> Path:

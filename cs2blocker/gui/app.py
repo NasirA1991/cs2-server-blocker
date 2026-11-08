@@ -183,6 +183,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.status_label.add_css_class("dim-label")
         bar.append(self.status_label)
         self.ping_button = Gtk.Button(label="Ping all")
+        self.ping_button.set_tooltip_text(
+            "ICMP is intentionally not blocked; use the drop counters to verify SDR UDP blocking."
+        )
         self.ping_button.connect("clicked", lambda *_: self._start_ping())
         bar.append(self.ping_button)
         self.refresh_button = Gtk.Button(label="Refresh list")
@@ -849,10 +852,17 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
 class Cs2BlockerApp(Adw.Application):
     def __init__(self, *, smoke_test: bool = False) -> None:
-        super().__init__(
-            application_id="org.cs2blocker.Gui",
-            flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
+        app_id = (
+            f"org.cs2blocker.Gui.Smoke{os.getpid()}"
+            if smoke_test
+            else "org.cs2blocker.Gui"
         )
+        flags = (
+            Gio.ApplicationFlags.NON_UNIQUE
+            if smoke_test
+            else Gio.ApplicationFlags.DEFAULT_FLAGS
+        )
+        super().__init__(application_id=app_id, flags=flags)
         self.smoke_test = smoke_test
         self.window: Cs2BlockerWindow | None = None
         self.connect("activate", self._activate)

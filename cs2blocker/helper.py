@@ -598,7 +598,14 @@ def _monitor_payload(backend: Any) -> dict[str, Any]:
 
 def monitor_command(paths: Paths, args: argparse.Namespace) -> int:
     _require_root()
-    paths.ensure_dirs()
+    # The monitor is sandboxed with ProtectSystem=strict and only /run is
+    # writable.  Do not touch /etc or /var here; cs2blocker.service owns the
+    # runtime directory and starts before this unit.
+    try:
+        paths.run_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        if not paths.run_dir.is_dir():
+            raise
     try:
         config = load_config(paths, require_root=False, missing_ok=True)
     except Cs2BlockerError:
