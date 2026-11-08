@@ -1,7 +1,8 @@
 # Phase 0 — Research and feasibility
 
-**Status:** Phase 0 complete — real-host test passed; awaiting your go-ahead for Phase 1
-(and still happy to review the CLI tool if you paste it).
+**Status:** Phase 0 complete — real-host test passed. The project was subsequently
+implemented end-to-end on the instruction to finish autonomously; this document is kept
+as the research evidence.
 **Date:** 2026-11-08
 **Host used for research:** CachyOS (Arch-based), KDE Plasma on Wayland, kernel 7.3.1,
 nftables 1.1.7, Python 3.14.9, ufw 0.36.2 active, `nftables.service` inactive.

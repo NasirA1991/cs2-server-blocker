@@ -124,6 +124,14 @@ The GUI can toggle the same units from its **Boot persistence** switch. The
 monitor service is pulled in by `cs2blocker.service`; do not enable it
 separately.
 
+### Debian/RPM packages
+
+`.deb` and `.rpm` packages are not built in this pass. The planned path is
+`nfpm` using the same file list as `install.sh` (package, helper, units, polkit
+action, desktop file, icon, man page), with `postinst` running `systemctl
+daemon-reload` but not enabling the service. The Arch PKGBUILD and generic
+installer are complete and tested to a staging root.
+
 > **Why not Flatpak or AppImage?** A sandboxed app cannot install a root helper,
 > a polkit action or systemd units, and cannot edit the host firewall. Shipping
 > the privileged parts in Flatpak/AppImage would produce a GUI that cannot
@@ -389,9 +397,9 @@ The uninstaller deletes only `inet cs2blocker`; it never flushes the ruleset.
 ## Development and tests
 
 ```bash
-python3 -m unittest discover -s tests -v      # unprivileged unit tests
-./scripts/netns-integration.sh                 # root-in-userns end-to-end test
-./cs2blocker-gui --smoke-test                  # GUI construction test
+make test                                      # unprivileged unit tests + GUI smoke
+make test-netns                                # root-in-userns end-to-end test
+./cs2blocker-gui --smoke-test                  # GUI construction only
 ```
 
 The netns test uses `unshare -rn`, creates its own table, verifies apply,

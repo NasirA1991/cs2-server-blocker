@@ -1,6 +1,6 @@
 # Design — CS2 Server Blocker for Linux
 
-**Status:** proposal for Phase 0 approval. No application code yet.
+**Status:** implemented in v0.1.0; this document is kept as the design reference.
 **Scope:** a firewall rule manager only. It does not read, modify or inject into the
 game, its files, its memory or Steam. Native and Flatpak Steam are equivalent because
 blocking happens in the host network stack.
@@ -56,7 +56,7 @@ only after an authenticated Apply.
 `api.steampowered.com` (redirects allowlisted to the same host), 15 s timeout, 4 MiB cap,
 full schema validation. It writes `/var/lib/cs2blocker/sdr-730.json` atomically only
 after the whole document validates; a failed fetch leaves the last good cache untouched.
-A root-installed bundled snapshot under `/usr/lib/cs2blocker/data/` is used only when no
+A root-installed bundled snapshot under `/usr/lib/cs2blocker/cs2blocker/data/` is used only when no
 valid cache exists. The helper never reads SDR data from a user-writable path.
 
 `/etc/cs2blocker/config.json` is root-owned 0644 and written only by the helper. At read
@@ -180,8 +180,7 @@ that drops the `udp dport` match.
 
 Named counters appear in `nft -j list table inet cs2blocker` with `packets`/`bytes`.
 The monitor publishes them; `cs2blockctl counters [--watch]` reads the last snapshot.
-Counters reset on every apply; the GUI labels them "since last apply" and can call
-`nft reset counters table inet cs2blocker` (still only our table).
+Counters reset on every apply; the GUI labels them as drops since the last apply.
 
 ---
 
@@ -237,7 +236,7 @@ WantedBy=multi-user.target
 ```
 
 `cs2blocker-refresh.service`: oneshot, `After=network-online.target`,
-`Wants=network-online.target`, `ExecStart=… refresh`.
+`Wants=network-online.target`, `ExecStart=… refresh --timer`.
 `cs2blocker-refresh.timer`: `OnCalendar=weekly`, `OnBootSec=15min`,
 `RandomizedDelaySec=6h`, `Persistent=true`.
 `cs2blocker-monitor.service`: simple, `ExecStart=… monitor`, `Restart=on-failure`,
@@ -289,7 +288,7 @@ repo/
   README.md
 
 installed/
-  /usr/lib/cs2blocker/{cs2blocker/,cs2blocker-helper,data/}
+  /usr/lib/cs2blocker/{cs2blocker/,cs2blocker-helper,cs2blocker/data/}
   /usr/bin/{cs2blockctl,cs2blocker-gui}
   /usr/lib/systemd/system/{cs2blocker.service,cs2blocker-refresh.service,
                            cs2blocker-refresh.timer,cs2blocker-monitor.service}
@@ -324,8 +323,8 @@ verbatim, including the exact `sudo` fallback.
 
 Phase 5 additions live in the same window: rows highlight/accumulate when a POP's counter
 rises ("test mode"); if a refresh changed the revision or relay set, `state.json` carries
-`relay_list_changed` plus added/removed counts, and the GUI shows a banner and an optional
-`Gio.Notification`. The GUI warns before applying a selection that blocks everything or
+`relay_list_changed` plus added/removed counts, and the GUI shows an in-app toast on the
+next status poll. The GUI warns before applying a selection that blocks everything or
 leaves fewer than two POPs.
 
 **CLI:**

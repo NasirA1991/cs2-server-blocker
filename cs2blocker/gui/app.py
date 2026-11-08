@@ -104,7 +104,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
         self.banner = Adw.Banner()
         self.banner.set_button_label("Refresh list")
-        self.banner.connect("button-clicked", lambda *_: self._refresh_clicked())
+        self.banner.connect("button-clicked", lambda *_: self._banner_clicked())
         self.banner.set_revealed(False)
 
         self.preferences = Adw.PreferencesPage()
@@ -373,7 +373,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         live = self._live or {}
         if state.get("error"):
             self.banner.set_title(f"Last apply failed: {state['error']}")
-            self.banner.set_button_label("Retry")
+            self.banner.set_button_label("Retry apply")
             self.banner.set_revealed(True)
             return
         if not self._installed():
@@ -397,6 +397,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.banner.set_revealed(True)
             return
         self.banner.set_revealed(False)
+
+    def _banner_clicked(self) -> None:
+        if self._state.get("error"):
+            self._apply_clicked()
+        else:
+            self._refresh_clicked()
 
     def _update_selection_warnings(self) -> None:
         try:

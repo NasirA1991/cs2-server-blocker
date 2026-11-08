@@ -8,3 +8,7 @@ pkg/
 *.pkg.tar.zst
 .pytest_cache/
 .coverage
+packaging/src/
+packaging/pkg/
+packaging/cs2blocker/
+packaging/*.pkg.tar.zst

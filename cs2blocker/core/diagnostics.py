@@ -211,11 +211,18 @@ def collect(paths: Paths, *, privileged: bool = False) -> list[Check]:
         )
     )
     agent = None
-    for candidate in ("polkit-kde-authentication-agent-1", "polkit-gnome-authentication-agent-1", "lxpolkit", "polkit-mate-authentication-agent-1"):
-        result = run(["pgrep", "-f", candidate], timeout=5.0)
-        if result.returncode == 0:
-            agent = candidate
-            break
+    pgrep = which_fixed("pgrep")
+    if pgrep:
+        for candidate in (
+            "polkit-kde-authentication-agent-1",
+            "polkit-gnome-authentication-agent-1",
+            "lxpolkit",
+            "polkit-mate-authentication-agent-1",
+        ):
+            result = run([pgrep, "-f", candidate], timeout=5.0)
+            if result.returncode == 0:
+                agent = candidate
+                break
     checks.append(
         Check(
             "polkit agent",
