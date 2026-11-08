@@ -95,17 +95,30 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
     # --------------------------------------------------------------------- UI
     def _build_ui(self) -> None:
-        toolbar = Adw.ToolbarView()
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(title="CS2 Server Blocker", subtitle="SDR datacenter firewall rules")
         )
-        toolbar.add_top_bar(header)
+        root.append(header)
 
-        self.banner = Adw.Banner()
-        self.banner.set_button_label("Refresh list")
-        self.banner.connect("button-clicked", lambda *_: self._banner_clicked())
-        self.banner.set_revealed(False)
+        # A plain Gtk.Revealer keeps the GUI compatible with libadwaita 1.1/1.2,
+        # where Adw.Banner and Adw.ToolbarView do not exist yet.
+        self.banner_revealer = Gtk.Revealer()
+        self.banner_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
+        banner_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        banner_box.set_margin_top(8)
+        banner_box.set_margin_bottom(8)
+        banner_box.set_margin_start(12)
+        banner_box.set_margin_end(12)
+        self.banner_label = Gtk.Label(xalign=0.0, hexpand=True, wrap=True)
+        self.banner_button = Gtk.Button()
+        self.banner_button.add_css_class("flat")
+        self.banner_button.connect("clicked", lambda *_: self._banner_clicked())
+        banner_box.append(self.banner_label)
+        banner_box.append(self.banner_button)
+        self.banner_revealer.set_child(banner_box)
+        root.append(self.banner_revealer)
 
         self.preferences = Adw.PreferencesPage()
         status_group = Adw.PreferencesGroup(title="Status")
@@ -159,10 +172,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_child(self.preferences)
 
-        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        content.append(self.banner)
-        content.append(scrolled)
-        toolbar.set_content(content)
+        root.append(scrolled)
 
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         bar.set_margin_top(8)
@@ -188,10 +198,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.apply_button.add_css_class("suggested-action")
         self.apply_button.connect("clicked", lambda *_: self._apply_clicked())
         bar.append(self.apply_button)
-        toolbar.add_bottom_bar(bar)
+        root.append(bar)
 
         self.toast_overlay = Adw.ToastOverlay()
-        self.toast_overlay.set_child(toolbar)
+        self.toast_overlay.set_child(root)
         self.set_content(self.toast_overlay)
 
     def _rebuild_regions(self) -> None:
@@ -372,31 +382,31 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         state = self._state
         live = self._live or {}
         if state.get("error"):
-            self.banner.set_title(f"Last apply failed: {state['error']}")
-            self.banner.set_button_label("Retry apply")
-            self.banner.set_revealed(True)
+            self._banner_show(f"Last apply failed: {state['error']}", "Retry apply")
             return
         if not self._installed():
-            self.banner.set_title(
-                "Not installed system-wide. Run: sudo ./packaging/install.sh"
-            )
-            self.banner.set_button_label("")
-            self.banner.set_revealed(True)
+            self._banner_show("Not installed system-wide. Run: sudo ./packaging/install.sh", "")
             return
         cache = state.get("cache") or {}
         if cache.get("stale") or self.origin == "bundled":
-            self.banner.set_title(
-                "Relay list is bundled/stale. Refresh to fetch the current Valve data."
+            self._banner_show(
+                "Relay list is bundled/stale. Refresh to fetch the current Valve data.",
+                "Refresh list",
             )
-            self.banner.set_button_label("Refresh list")
-            self.banner.set_revealed(True)
             return
         if state.get("refresh_error"):
-            self.banner.set_title(f"Last relay refresh failed: {state['refresh_error']}")
-            self.banner.set_button_label("Refresh list")
-            self.banner.set_revealed(True)
+            self._banner_show(f"Last relay refresh failed: {state['refresh_error']}", "Refresh list")
             return
-        self.banner.set_revealed(False)
+        self._banner_hide()
+
+    def _banner_show(self, title: str, button_label: str) -> None:
+        self.banner_label.set_text(title)
+        self.banner_button.set_label(button_label)
+        self.banner_button.set_visible(bool(button_label))
+        self.banner_revealer.set_reveal_child(True)
+
+    def _banner_hide(self) -> None:
+        self.banner_revealer.set_reveal_child(False)
 
     def _banner_clicked(self) -> None:
         if self._state.get("error"):
