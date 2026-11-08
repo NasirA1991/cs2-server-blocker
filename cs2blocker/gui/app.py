@@ -377,6 +377,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.warning_label = Gtk.Label(label="", xalign=0.0, hexpand=True, wrap=True)
         self.warning_label.add_css_class("dim")
         self.warning_label.add_css_class("footer")
+        self.revert_button = Gtk.Button(label="Revert")
+        self.revert_button.set_tooltip_text("Discard unsaved map changes")
+        self.revert_button.connect("clicked", lambda *_: self._revert_clicked())
         self.unblock_button = Gtk.Button(label="Unblock all")
         self.unblock_button.connect("clicked", lambda *_: self._unblock_clicked())
         self.spinner = Gtk.Spinner()
@@ -384,6 +387,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.apply_button.add_css_class("suggested-action")
         self.apply_button.connect("clicked", lambda *_: self._apply_clicked())
         action_row.append(self.warning_label)
+        action_row.append(self.revert_button)
         action_row.append(self.unblock_button)
         action_row.append(self.spinner)
         action_row.append(self.apply_button)
@@ -590,11 +594,13 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.header_refresh_button,
             self.preset_dropdown,
             self.save_preset_button,
+            self.revert_button,
             self.unblock_button,
             self.menu_refresh_button,
             self.menu_ping_button,
         ):
             button.set_sensitive(installed and not self._busy)
+        self.revert_button.set_sensitive(installed and dirty and not self._busy)
         self.apply_button.set_sensitive(installed and dirty and not self._busy)
         self.apply_button.set_label("Apply changes" if dirty else "Applied")
         self.apply_button.set_tooltip_text(
@@ -774,6 +780,17 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 "Apply failed",
                 (stderr or stdout).strip() + f"\n\nCommand:\n{command}",
             )
+
+    def _revert_clicked(self) -> None:
+        self.mode = self.applied_mode
+        self.selected = set(self.applied_selection)
+        self._update_mode_buttons()
+        self.map.set_selection(self.selected, self.mode)
+        self._update_stats()
+        self._update_detail()
+        self._update_selection_warnings()
+        self._update_buttons()
+        self._toast("Reverted to the applied selection")
 
     def _unblock_clicked(self) -> None:
         self._confirm(
