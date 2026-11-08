@@ -41,7 +41,7 @@ class PackagingTests(unittest.TestCase):
             "usr/lib/systemd/system/cs2blocker.service",
             "usr/lib/systemd/system/cs2blocker-refresh.timer",
             "usr/share/polkit-1/actions/org.cs2blocker.policy",
-            "usr/share/applications/cs2blocker.desktop",
+            "usr/share/applications/org.cs2blocker.Gui.desktop",
             "usr/share/icons/hicolor/scalable/apps/cs2blocker.svg",
             "usr/share/licenses/cs2blocker/LICENSE",
         ]
@@ -88,7 +88,7 @@ class PackagingTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("desktop-file-validate"), "desktop-file-validate absent")
     def test_desktop_file(self):
         result = subprocess.run(
-            ["desktop-file-validate", str(self.root / "usr/share/applications/cs2blocker.desktop")],
+            ["desktop-file-validate", str(self.root / "usr/share/applications/org.cs2blocker.Gui.desktop")],
             capture_output=True,
             text=True,
             check=False,

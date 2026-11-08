@@ -192,7 +192,7 @@ def render_nft(
     *,
     revision: int = 0,
     replace_strategy: str = "destroy",
-    version: str = "0.1.0",
+    version: str = "0.1.1",
     generated_at: str = DEFAULT_GENERATED_AT,
 ) -> str:
     """Render a complete, self-contained nftables file for our table."""
@@ -285,7 +285,7 @@ def render_nft(
 def render_clear(
     *,
     replace_strategy: str = "destroy",
-    version: str = "0.1.0",
+    version: str = "0.1.1",
     generated_at: str = DEFAULT_GENERATED_AT,
 ) -> str:
     if replace_strategy == "none":

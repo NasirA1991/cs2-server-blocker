@@ -111,6 +111,7 @@ class ContinentSidebar:
 class Cs2BlockerWindow(Adw.ApplicationWindow):
     def __init__(self, application: Adw.Application, *, smoke_test: bool = False) -> None:
         super().__init__(application=application)
+        self.set_icon_name("cs2blocker")
         self.set_title("CS2 Server Blocker")
         self.set_default_size(1380, 860)
         self.set_size_request(900, 620)
@@ -2077,6 +2078,7 @@ class Cs2BlockerApp(Adw.Application):
             else Gio.ApplicationFlags.DEFAULT_FLAGS
         )
         super().__init__(application_id=app_id, flags=flags)
+        Gtk.Window.set_default_icon_name("cs2blocker")
         self.smoke_test = smoke_test
         self.window: Cs2BlockerWindow | None = None
         self.connect("activate", self._activate)

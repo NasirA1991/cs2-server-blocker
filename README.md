@@ -30,26 +30,26 @@ the result directly through nftables.
 
 ```bash
 yay -S cs2blocker
-# or: sudo pacman -U cs2blocker-0.1.0-2-any.pkg.tar.zst
+# or: sudo pacman -U cs2blocker-0.1.1-1-any.pkg.tar.zst
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./cs2blocker_0.1.0-2_amd64.deb
+sudo apt install ./cs2blocker_0.1.1-1_amd64.deb
 ```
 
 **Fedora / RHEL-compatible**
 
 ```bash
-sudo dnf install ./cs2blocker-0.1.0-2.x86_64.rpm
+sudo dnf install ./cs2blocker-0.1.1-1.x86_64.rpm
 ```
 
 **From the release tarball**
 
 ```bash
-tar xzf cs2blocker-0.1.0.tar.gz
-cd cs2blocker-0.1.0
+tar xzf cs2blocker-0.1.1.tar.gz
+cd cs2blocker-0.1.1
 sudo ./packaging/install.sh
 ```
 

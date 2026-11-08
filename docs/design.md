@@ -1,6 +1,6 @@
 # Design — CS2 Server Blocker for Linux
 
-**Status:** implemented in v0.1.0; this document is kept as the design reference.
+**Status:** implemented in v0.1.1; this document is kept as the design reference.
 **Scope:** a firewall rule manager only. It does not read, modify or inject into the
 game, its files, its memory or Steam. Native and Flatpak Steam are equivalent because
 blocking happens in the host network stack.
@@ -293,7 +293,7 @@ installed/
   /usr/lib/systemd/system/{cs2blocker.service,cs2blocker-refresh.service,
                            cs2blocker-refresh.timer,cs2blocker-monitor.service}
   /usr/share/polkit-1/actions/org.cs2blocker.policy
-  /usr/share/applications/cs2blocker.desktop
+  /usr/share/applications/org.cs2blocker.Gui.desktop
   /usr/share/icons/hicolor/scalable/apps/cs2blocker.svg
   /etc/cs2blocker/config.json          # runtime, 0644, helper-only writes
   /var/lib/cs2blocker/{sdr-730.json,state.json}

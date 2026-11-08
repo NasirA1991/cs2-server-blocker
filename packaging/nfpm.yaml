@@ -1,8 +1,8 @@
 name: cs2blocker
 arch: amd64
 platform: linux
-version: 0.1.0
-release: "2"
+version: 0.1.1
+release: "1"
 section: utils
 priority: optional
 maintainer: CS2 Server Blocker contributors <cs2blocker@localhost>

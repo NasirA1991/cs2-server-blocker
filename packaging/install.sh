@@ -46,10 +46,16 @@ install -Dm644 "$SRC/packaging/systemd/cs2blocker-refresh.service" "$DEST/lib/sy
 install -Dm644 "$SRC/packaging/systemd/cs2blocker-refresh.timer" "$DEST/lib/systemd/system/cs2blocker-refresh.timer"
 install -Dm644 "$SRC/packaging/systemd/cs2blocker-monitor.service" "$DEST/lib/systemd/system/cs2blocker-monitor.service"
 install -Dm644 "$SRC/packaging/polkit/org.cs2blocker.policy" "$ROOT/usr/share/polkit-1/actions/org.cs2blocker.policy"
-install -Dm644 "$SRC/packaging/cs2blocker.desktop" "$ROOT/usr/share/applications/cs2blocker.desktop"
+# Keep desktop file ID aligned with the Wayland app_id: org.cs2blocker.Gui
+install -Dm644 "$SRC/packaging/org.cs2blocker.Gui.desktop" "$ROOT/usr/share/applications/org.cs2blocker.Gui.desktop"
+rm -f "$ROOT/usr/share/applications/cs2blocker.desktop"
 install -Dm644 "$SRC/packaging/cs2blocker.svg" "$ROOT/usr/share/icons/hicolor/scalable/apps/cs2blocker.svg"
 install -Dm644 "$SRC/packaging/man/cs2blockctl.1" "$ROOT/usr/share/man/man1/cs2blockctl.1"
 install -Dm644 "$SRC/LICENSE" "$ROOT/usr/share/licenses/cs2blocker/LICENSE"
+
+if [[ $ROOT == "/" ]] && command -v gtk-update-icon-cache >/dev/null; then
+  gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
 
 if [[ $DAEMON_RELOAD -eq 1 && $ROOT == "/" ]] && command -v systemctl >/dev/null; then
   systemctl daemon-reload || true

@@ -57,6 +57,7 @@ rm -f -- "$DEST/lib/systemd/system/cs2blocker.service" \
   "$DEST/lib/systemd/system/cs2blocker-refresh.timer" \
   "$DEST/lib/systemd/system/cs2blocker-monitor.service"
 rm -f -- "$ROOT/usr/share/polkit-1/actions/org.cs2blocker.policy"
+rm -f -- "$ROOT/usr/share/applications/org.cs2blocker.Gui.desktop"
 rm -f -- "$ROOT/usr/share/applications/cs2blocker.desktop"
 rm -f -- "$ROOT/usr/share/icons/hicolor/scalable/apps/cs2blocker.svg"
 rm -f -- "$ROOT/usr/share/man/man1/cs2blockctl.1"

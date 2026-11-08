@@ -8,4 +8,5 @@ Icon=cs2blocker
 Terminal=false
 Categories=Network;
 StartupNotify=true
+StartupWMClass=org.cs2blocker.Gui
 Keywords=CS2;Counter-Strike;SDR;firewall;latency;ping;
