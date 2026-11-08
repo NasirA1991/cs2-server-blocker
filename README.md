@@ -16,6 +16,11 @@ nftables table with one named set and one named counter per blocked POP.
 
 ![CS2 Server Blocker world map](docs/screenshot.png)
 
+Clicking a crowded cluster opens the individual cities, each with its own
+state and ping:
+
+![CS2 Server Blocker city popover](docs/screenshot-city.png)
+
 ---
 
 ## Features
@@ -61,7 +66,7 @@ nftables table with one named set and one named counter per blocked POP.
 **Arch / CachyOS / Manjaro**
 
 ```bash
-sudo pacman -S --needed python nftables polkit python-gobject gtk4 libadwaita
+sudo pacman -S --needed python nftables polkit python-gobject python-cairo gtk4 libadwaita
 # optional fallback backend
 sudo pacman -S --needed ipset
 ```
@@ -71,7 +76,7 @@ sudo pacman -S --needed ipset
 ```bash
 sudo apt update
 sudo apt install python3 nftables polkitd pkexec \
-  python3-gi gir1.2-gtk-4.0 gir1.2-adw-1
+  python3-gi python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1
 # optional fallback backend
 sudo apt install ipset
 ```
@@ -79,7 +84,7 @@ sudo apt install ipset
 **Fedora**
 
 ```bash
-sudo dnf install python3 nftables polkit python3-gobject gtk4 libadwaita
+sudo dnf install python3 nftables polkit python3-gobject python3-cairo gtk4 libadwaita
 # optional fallback backend
 sudo dnf install ipset
 ```
@@ -87,7 +92,7 @@ sudo dnf install ipset
 **openSUSE**
 
 ```bash
-sudo zypper install python3 nftables polkit python3-gobject gtk4 libadwaita
+sudo zypper install python3 nftables polkit python3-gobject python3-cairo gtk4 libadwaita
 # optional fallback backend
 sudo zypper install ipset
 ```

@@ -87,6 +87,7 @@ class WorldMap(Gtk.DrawingArea):
         self.center_lat = (LAT_MIN + LAT_MAX) / 2.0
         self.on_toggle: Callable[[str], None] | None = None
         self.on_focus: Callable[[str | None], None] | None = None
+        self.on_cluster: Callable[[tuple[MapEntry, ...], float, float], None] | None = None
         self._targets: list[_Target] = []
         self._hover_target: _Target | None = None
         self._map_rect = (0.0, 0.0, 1.0, 1.0)
@@ -280,7 +281,14 @@ class WorldMap(Gtk.DrawingArea):
         if not self._dragged and self._press_target is not None:
             target = self._press_target
             if target.cluster:
-                self._zoom_to_entries(list(target.entries))
+                if (
+                    len(target.entries) <= 4
+                    and self.zoom >= 2.5
+                    and self.on_cluster is not None
+                ):
+                    self.on_cluster(target.entries, target.x, target.y)
+                else:
+                    self._zoom_to_entries(list(target.entries))
             elif target.entries:
                 entry = target.entries[0]
                 if self.on_toggle:

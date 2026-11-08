@@ -272,6 +272,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.map = WorldMap()
         self.map.on_toggle = self._toggle_pop
         self.map.on_focus = self._focus_pop
+        self.map.on_cluster = self._show_cluster_popover
         overlay = Gtk.Overlay()
         overlay.set_child(self.map)
         overlay.set_vexpand(True)
@@ -623,6 +624,57 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.map.set_focus(code)
         self._update_detail()
         self._update_buttons()
+
+    def _show_cluster_popover(self, entries: tuple[MapEntry, ...], x: float, y: float) -> None:
+        popover = Gtk.Popover()
+        popover.set_parent(self.map)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+        title = Gtk.Label(label="Datacenters in this cluster", xalign=0.0)
+        title.add_css_class("section-title")
+        box.append(title)
+        hint = Gtk.Label(label="Click one to toggle it and show its ping.", xalign=0.0)
+        hint.add_css_class("dim")
+        hint.add_css_class("footer")
+        box.append(hint)
+        for entry in sorted(entries, key=lambda item: item.title):
+            button = Gtk.Button()
+            button.add_css_class("flat")
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            text.set_hexpand(True)
+            city = Gtk.Label(label=entry.title, xalign=0.0)
+            city.add_css_class("section-title")
+            sub = Gtk.Label(label=entry.subtitle, xalign=0.0)
+            sub.add_css_class("dim")
+            sub.add_css_class("footer")
+            text.append(city)
+            text.append(sub)
+            state = Gtk.Label(label="BLOCKED" if self._is_blocked(entry.code) else "ALLOWED", xalign=1.0)
+            state.add_css_class("state-blocked" if self._is_blocked(entry.code) else "state-allowed")
+            row.append(text)
+            row.append(state)
+            button.set_child(row)
+            button.connect(
+                "clicked",
+                lambda _button, code=entry.code: (
+                    self._toggle_pop(code),
+                    self._focus_pop(code),
+                    popover.popdown(),
+                ),
+            )
+            box.append(button)
+        popover.set_child(box)
+        try:
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+            popover.set_pointing_to(rect)
+        except Exception:
+            pass
+        popover.popup()
 
     def _toggle_focus(self) -> None:
         if self.focus_code:
