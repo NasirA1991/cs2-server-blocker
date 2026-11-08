@@ -43,6 +43,7 @@ class PackagingTests(unittest.TestCase):
             "usr/share/polkit-1/actions/org.cs2blocker.policy",
             "usr/share/applications/cs2blocker.desktop",
             "usr/share/icons/hicolor/scalable/apps/cs2blocker.svg",
+            "usr/share/licenses/cs2blocker/LICENSE",
         ]
         for relative in expected:
             self.assertTrue((self.root / relative).is_file(), relative)

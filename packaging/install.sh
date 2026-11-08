@@ -49,6 +49,7 @@ install -Dm644 "$SRC/packaging/polkit/org.cs2blocker.policy" "$ROOT/usr/share/po
 install -Dm644 "$SRC/packaging/cs2blocker.desktop" "$ROOT/usr/share/applications/cs2blocker.desktop"
 install -Dm644 "$SRC/packaging/cs2blocker.svg" "$ROOT/usr/share/icons/hicolor/scalable/apps/cs2blocker.svg"
 install -Dm644 "$SRC/packaging/man/cs2blockctl.1" "$ROOT/usr/share/man/man1/cs2blockctl.1"
+install -Dm644 "$SRC/LICENSE" "$ROOT/usr/share/licenses/cs2blocker/LICENSE"
 
 if [[ $DAEMON_RELOAD -eq 1 && $ROOT == "/" ]] && command -v systemctl >/dev/null; then
   systemctl daemon-reload || true

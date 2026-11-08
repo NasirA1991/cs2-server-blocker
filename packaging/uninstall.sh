@@ -55,6 +55,7 @@ rm -f -- "$ROOT/usr/share/polkit-1/actions/org.cs2blocker.policy"
 rm -f -- "$ROOT/usr/share/applications/cs2blocker.desktop"
 rm -f -- "$ROOT/usr/share/icons/hicolor/scalable/apps/cs2blocker.svg"
 rm -f -- "$ROOT/usr/share/man/man1/cs2blockctl.1"
+rm -rf -- "$ROOT/usr/share/licenses/cs2blocker"
 
 if [[ $KEEP_CONFIG -eq 0 ]]; then
   rm -rf -- "$ROOT/etc/cs2blocker" "$ROOT/var/lib/cs2blocker" "$ROOT/run/cs2blocker"
