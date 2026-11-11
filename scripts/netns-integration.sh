@@ -41,7 +41,8 @@ python3 -m cs2blocker.helper apply --pops ams >/dev/null
 nft list table inet cs2blocker >/dev/null
 
 python3 -m cs2blocker.helper apply --mode only --pops ams,fra >/dev/null
-nft list table inet cs2blocker | grep -q 'set pop_'
+# Avoid grep -q: its early exit plus pipefail makes nft die with SIGPIPE (141).
+nft list table inet cs2blocker | grep 'set pop_' >/dev/null
 python3 -m cs2blocker.helper status --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["active"]; assert d["state"]["mode"] == "only"'
 
 python3 -m cs2blocker.helper clear >/dev/null

@@ -37,18 +37,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install GTK4, libadwaita and Xvfb
+      - name: Construct the window in an Arch container
         run: |
-          sudo timeout 60 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
-          sudo timeout 180 apt-get install -y python3-gi python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1 xvfb
-      - name: Construct the window
-        env:
-          GSK_RENDERER: cairo
-          GTK_A11Y: none
-        run: xvfb-run -a ./cs2blocker-gui --smoke-test
+          # Use the same distro as the Arch package job. The Ubuntu runner's
+          # azure archive mirror is periodically unreachable, which made the
+          # apt-based install flaky.
+          docker run --rm -v "$PWD":/src -w /src archlinux:latest bash -lc '
+            pacman -Syu --noconfirm --needed python python-gobject python-cairo gtk4 libadwaita xorg-server-xvfb
+            GSK_RENDERER=cairo GTK_A11Y=none xvfb-run -a ./cs2blocker-gui --smoke-test
+          '
 
   netns:
     name: nftables netns integration
@@ -58,10 +55,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install nftables
+      - name: Ensure nftables is present
         run: |
-          sudo timeout 60 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
-          sudo timeout 180 apt-get install -y nftables iproute2
+          command -v nft
+          command -v ip
       - name: Apply and clear inside a network namespace
         run: sudo bash ./scripts/netns-integration.sh
 
