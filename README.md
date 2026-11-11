@@ -31,26 +31,26 @@ apply the result directly through nftables.
 
 ```bash
 yay -S cs2blocker
-# or: sudo pacman -U cs2blocker-0.1.3-1-any.pkg.tar.zst
+# or: sudo pacman -U cs2blocker-0.1.4-1-any.pkg.tar.zst
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./cs2blocker_0.1.3-1_amd64.deb
+sudo apt install ./cs2blocker_0.1.4-1_amd64.deb
 ```
 
 **Fedora / RHEL-compatible**
 
 ```bash
-sudo dnf install ./cs2blocker-0.1.3-1.x86_64.rpm
+sudo dnf install ./cs2blocker-0.1.4-1.x86_64.rpm
 ```
 
 **From the release tarball**
 
 ```bash
-tar xzf cs2blocker-0.1.3.tar.gz
-cd cs2blocker-0.1.3
+tar xzf cs2blocker-0.1.4.tar.gz
+cd cs2blocker-0.1.4
 sudo ./packaging/install.sh
 ```
 
@@ -81,7 +81,7 @@ See [Download](#download) for all release artifacts and dependencies.
   collapses automatically on narrow windows. Presets set the allowed/blocked
   state, and Apply commits it through the helper.
 - CLI (`cs2blockctl`): `list`, `status`, `block`, `unblock`, `only`, `preset`,
-  `refresh`, `apply`, `clear`, `ping`, `counters`, `doctor`.
+  `refresh`, `apply`, `pause`, `resume`, `clear`, `ping`, `counters`, `doctor`.
 - Explicit **Allowed / Blocked** state per datacenter. Checked means allowed.
 - **Block newly added datacenters automatically** setting: when enabled, new
   Valve POPs start blocked after Apply; when disabled, they start allowed.
@@ -92,8 +92,9 @@ See [Download](#download) for all release artifacts and dependencies.
   POP is blocked.
 - Persistent across reboots with systemd, and refreshed weekly from Valve.
 - Root-owned SDR cache and config. The GUI never runs as root; privileged work
-  goes through a small helper via a polkit action (`auth_admin_keep`) or
-  `sudo` on systems without a polkit agent.
+  goes through a small helper via a polkit action (`auth_admin_keep` for the
+  active session, never for an inactive one) or `sudo` on systems without a
+  polkit agent.
 - Keyboard support for the map and datacenter rows; a status pill exposes
   backend, relay revision and boot state without cluttering the workspace.
 - Requires libadwaita 1.4+ for the responsive `Adw.OverlaySplitView`.
@@ -101,7 +102,9 @@ See [Download](#download) for all release artifacts and dependencies.
   previous table untouched because the whole ruleset is one `nft -f`
   transaction after an `nft -c` check.
 - iptables/ipset fallback only when nftables is unavailable.
-- One-command unblock and one-command full removal.
+- Pause removes the rules while keeping the saved selection; resume restores
+  exactly the same rules. `clear` remains the full reset that also forgets
+  the selection.
 
 ---
 
@@ -204,8 +207,8 @@ normal reloads do not remove this table. If something explicitly runs
 | Windows / macOS | Not supported; this is a Linux netfilter tool. |
 
 The only hard requirements are Linux with nftables (or `iptables` + `ipset` as
-a fallback), Python 3.11+, and root only for apply/clear/refresh. The GUI also
-needs GTK4, libadwaita, PyGObject and `python-cairo`. If no polkit agent is
+a fallback), Python 3.11+, and root only for apply/pause/resume/clear/refresh.
+The GUI also needs GTK4, libadwaita, PyGObject and `python-cairo`. If no polkit agent is
 running, the GUI prints the exact `sudo` fallback; the CLI works with
 `sudo cs2blockctl ...`.
 
@@ -272,6 +275,11 @@ firewall-table note. A relay-list change produces an in-app toast. Per-POP drop
 counters update every two seconds while the monitor is running. The
 **Settings** menu contains boot persistence and a manual refresh.
 
+Use **Pause** in the top bar to remove the rules while keeping the current
+selection; the map dims and the banner offers **Resume**. Pausing also stops the
+counter monitor and survives a reboot until you resume. **Unblock all** is the
+full reset and clears the saved selection.
+
 CLI examples:
 
 ```bash
@@ -286,7 +294,9 @@ sudo cs2blockctl preset eu_only
 sudo cs2blockctl preset --save "My EU set"
 sudo cs2blockctl apply
 sudo cs2blockctl refresh
-sudo cs2blockctl clear        # one-command unblock
+sudo cs2blockctl pause        # temporary SDR switch-off
+sudo cs2blockctl resume       # restore the paused selection
+sudo cs2blockctl clear        # full reset: rules + saved selection
 ```
 
 When the tool is installed, `cs2blockctl` uses `pkexec` automatically. If no
@@ -368,8 +378,8 @@ three probes.
 The rule is installed in the host network namespace, not in CS2. Any other
 program on the same machine that uses SDR (for example Dota 2, TF2, Deadlock,
 or a Steam feature that rides SDR) is affected too. Per-process/cgroup scoping
-is not implemented yet. Use `cs2blockctl clear` when you need SDR for another
-game.
+is not implemented yet. Use `cs2blockctl pause` when you need SDR for another
+game, and `cs2blockctl resume` afterwards.
 
 A netfilter `drop` in the `output` hook makes the local `sendto()` return
 `EPERM`. That is normal Linux behavior, and the game treats the relay as
@@ -383,15 +393,16 @@ map ping/detail display uninformative for blocked POPs.
 
 ```bash
 systemctl status cs2blocker.service
-systemctl restart cs2blocker.service     # re-apply / reboot simulation
+systemctl restart cs2blocker.service     # re-apply; stays paused if paused
 systemctl list-timers cs2blocker-refresh.timer
 journalctl -u cs2blocker.service -u cs2blocker-refresh.service -b
 ```
 
 The service is a oneshot with `RemainAfterExit=yes`, so `systemctl status`
 shows active after a successful apply. It applies the saved selection with no
-GUI, user session or network access. `refresh` needs network and keeps the old
-cache/rules if Valve is unavailable.
+GUI, user session or network access. After `pause`, the boot service skips the
+apply until you resume. `refresh` needs network and keeps the old cache/rules
+if Valve is unavailable.
 
 To disable persistence without removing the current rules:
 
@@ -399,14 +410,24 @@ To disable persistence without removing the current rules:
 sudo systemctl disable --now cs2blocker.service cs2blocker-refresh.timer
 ```
 
-To remove the rules now and clear the saved selection:
+To temporarily remove the rules without losing the selection:
+
+```bash
+sudo cs2blockctl pause
+sudo cs2blockctl resume
+```
+
+Pause keeps `config.json` untouched, removes the `inet cs2blocker` rules, and
+stops the counter monitor. The boot service uses `apply --if-not-paused`, and
+the weekly refresh also skips re-applying while paused, so a reboot does not
+silently undo the pause. Resume re-applies the saved selection.
+
+To remove the rules and clear the saved selection completely:
 
 ```bash
 sudo cs2blockctl clear
 ```
 
-There is currently no pause/resume command; `clear` is the explicit full
-unblock and it also clears the saved datacenter selection.
 
 ---
 
@@ -426,10 +447,10 @@ depend() {
     after nftables
 }
 start() {
-    /usr/lib/cs2blocker/cs2blocker-helper apply
+    /usr/lib/cs2blocker/cs2blocker-helper apply --if-not-paused
 }
 stop() {
-    /usr/lib/cs2blocker/cs2blocker-helper clear
+    /usr/lib/cs2blocker/cs2blocker-helper pause
 }
 ```
 
@@ -438,11 +459,12 @@ sudo chmod +x /etc/init.d/cs2blocker
 sudo rc-update add cs2blocker default
 ```
 
-**runit:** call `/usr/lib/cs2blocker/cs2blocker-helper apply` from
-`/etc/rc.local` or a oneshot service. **Refresh:** run
+**runit:** call `/usr/lib/cs2blocker/cs2blocker-helper apply --if-not-paused`
+from `/etc/rc.local` or a oneshot service; call `pause` to stop without losing
+the saved selection. **Refresh:** run
 `/usr/lib/cs2blocker/cs2blocker-helper refresh --timer` from cron/weekly
 scheduler. The GUI's **Settings** menu persistence control and live monitor require
-systemd; the CLI `apply`/`clear`/`refresh` still work.
+systemd; the CLI `apply`/`pause`/`resume`/`clear`/`refresh` still work.
 
 ---
 

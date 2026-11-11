@@ -1,4 +1,4 @@
-.TH CS2BLOCKCTL 1 "2026-11-11" "cs2blocker 0.1.3" "User Commands"
+.TH CS2BLOCKCTL 1 "2026-11-11" "cs2blocker 0.1.4" "User Commands"
 .SH NAME
 cs2blockctl \- manage CS2 SDR datacenter blocking rules
 .SH SYNOPSIS
@@ -25,10 +25,10 @@ List POPs, regions, relay counts and port ranges.
 Show active rules, selection, cache freshness and boot persistence.
 .TP
 .B block POP...
-Add POPs to the selection and switch to block mode.
+Make POPs blocked. In allow-only mode this removes them from the allow list.
 .TP
 .B unblock POP...
-Remove POPs from the selection.
+Make POPs allowed. In allow-only mode this adds them to the allow list.
 .TP
 .B only POP...
 Allow only the listed POPs; every other known POP is blocked.
@@ -41,6 +41,12 @@ Fetch a fresh SDR relay list and re-apply.
 .TP
 .B apply
 Re-apply the saved selection.
+.TP
+.B pause
+Remove all rules but keep the saved selection and presets; the boot service skips applying while paused.
+.TP
+.B resume
+Re-apply the saved selection after a pause.
 .TP
 .B clear
 Remove all rules and empty the saved selection.

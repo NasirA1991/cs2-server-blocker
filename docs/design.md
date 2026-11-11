@@ -1,6 +1,6 @@
 # Design — CS2 Server Blocker for Linux
 
-**Status:** implemented in v0.1.3; this document is kept as the design reference.
+**Status:** implemented in v0.1.3; pause/resume added in v0.1.4. This document is kept as the design reference.
 **Scope:** a firewall rule manager only. It does not read, modify or inject into the
 game, its files, its memory or Steam. Native and Flatpak Steam are equivalent because
 blocking happens in the host network stack.
@@ -49,8 +49,8 @@ only after an authenticated Apply.
 | systemd | root | run helper `apply` / `refresh` | anything else |
 
 **Helper input is deliberately tiny:** `apply --mode block|only --pops <codes>`,
-`apply --preset <name>`, `refresh`, `clear`, `persistence enable|disable`, `monitor`,
-`status`, `doctor`. No IP, CIDR, file path, nft snippet or shell string is accepted.
+`apply --preset <name>`, `refresh`, `pause`, `resume`, `clear`,
+`persistence enable|disable`, `monitor`, `status`, `doctor`. No IP, CIDR, file path, nft snippet or shell string is accepted.
 
 **Root-owned data.** The helper fetches HTTPS from exactly
 `api.steampowered.com` (redirects allowlisted to the same host), 15 s timeout, 4 MiB cap,
@@ -224,7 +224,7 @@ Before=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/lib/cs2blocker/cs2blocker-helper apply
+ExecStart=/usr/lib/cs2blocker/cs2blocker-helper apply --if-not-paused
 StateDirectory=cs2blocker
 RuntimeDirectory=cs2blocker
 ConfigurationDirectory=cs2blocker
@@ -335,12 +335,14 @@ below the map.
 |---|---|---|
 | `list [--region R] [--json]` | no | POPs, regions, relays, ports, cache age |
 | `status [--json]` | no | rules, selection, cache, persistence, last error |
-| `block <pop…>` | yes | add, mode=block, apply |
-| `unblock <pop…>` | yes | remove, apply |
+| `block <pop…>` | yes | make blocked (mode-aware), apply |
+| `unblock <pop…>` | yes | make allowed (mode-aware), apply |
 | `only <pop…>` | yes | mode=only, exactly these, apply |
 | `preset <name>` / `preset list|save|delete` | mixed | apply / manage presets |
 | `refresh` | yes | fetch + cache + re-apply |
 | `apply` | yes | re-apply saved selection |
+| `pause` | yes | delete our table, keep saved selection, stop monitor |
+| `resume` | yes | re-apply the saved selection after pause |
 | `clear` | yes | delete our table, empty selection, stop monitor |
 | `ping [pop…]` | no | unprivileged ICMP |
 | `counters [--watch]` | no | last published per-POP counters |

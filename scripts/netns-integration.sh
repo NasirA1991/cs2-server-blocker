@@ -40,6 +40,23 @@ nft list table inet unrelated_test >/dev/null
 python3 -m cs2blocker.helper apply --pops ams >/dev/null
 nft list table inet cs2blocker >/dev/null
 
+# Pause removes the rules but keeps the saved selection.
+python3 -m cs2blocker.helper pause >/dev/null
+python3 -m cs2blocker.helper status --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["paused"]; assert not d["active"]; assert d["state"]["selected"] == ["ams"]'
+if nft list table inet cs2blocker >/dev/null 2>&1; then
+  echo "our table still exists after pause" >&2
+  exit 1
+fi
+
+# The boot-time path must not undo a pause.
+python3 -m cs2blocker.helper apply --if-not-paused >/dev/null
+python3 -m cs2blocker.helper status --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["paused"]; assert not d["active"]'
+
+# Resume restores the same selection.
+python3 -m cs2blocker.helper resume >/dev/null
+python3 -m cs2blocker.helper status --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert not d["paused"]; assert d["active"]; assert d["state"]["mode"] == "block"'
+nft list table inet cs2blocker >/dev/null
+
 python3 -m cs2blocker.helper apply --mode only --pops ams,fra >/dev/null
 # Avoid grep -q: its early exit plus pipefail makes nft die with SIGPIPE (141).
 nft list table inet cs2blocker | grep 'set pop_' >/dev/null

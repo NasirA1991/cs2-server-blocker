@@ -22,6 +22,8 @@ class CliParsingTests(unittest.TestCase):
         self.assertEqual(args.command, "block")
         args = parser.parse_args(["--sudo", "clear"])
         self.assertTrue(args.sudo)
+        self.assertEqual(parser.parse_args(["pause"]).command, "pause")
+        self.assertEqual(parser.parse_args(["resume"]).command, "resume")
 
 
 class SelectionSemanticsTests(unittest.TestCase):

@@ -248,6 +248,10 @@ def _safe_active(paths: Paths) -> bool:
     return bool(_read_state(paths).get("active", False))
 
 
+def _is_paused(paths: Paths) -> bool:
+    return bool(_read_state(paths).get("paused", False))
+
+
 def _apply_plan_and_state(
     paths: Paths,
     config: ConfigType,
@@ -255,6 +259,7 @@ def _apply_plan_and_state(
     *,
     origin: str,
     backend: Any = None,
+    paused: bool = False,
 ) -> tuple[Any, Any]:
     plan = build_plan(snapshot, config.selection)
     chosen = backend or make_backend(config.backend)
@@ -277,6 +282,8 @@ def _apply_plan_and_state(
         message=result.message,
         error=None,
         ok=True,
+        paused=paused,
+        paused_at=None,
         last_apply_at=utc_now(),
         cache=_cache_info(snapshot, origin),
     )
@@ -298,6 +305,9 @@ def apply_command(paths: Paths, args: argparse.Namespace, *, backend: Any = None
     _require_root()
     paths.ensure_dirs()
     with lock(paths, timeout=LOCK_TIMEOUT):
+        if getattr(args, "if_not_paused", False) and _is_paused(paths):
+            print("paused: skipping boot-time apply; selection kept")
+            return 0
         had_config = paths.config_file.exists()
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
@@ -366,6 +376,7 @@ def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
             config = default_config()
+        paused = _is_paused(paths)
         old_snapshot: SdrSnapshot | None = None
         try:
             old_snapshot, old_origin, old_warnings = load_snapshot_for_use(paths, config.appid)
@@ -383,7 +394,7 @@ def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
                 cache=_cache_info(old_snapshot, old_origin, old_warnings) if old_snapshot else {},
             )
             print(f"refresh failed: {exc}", file=sys.stderr)
-            if old_snapshot is not None and not args.no_apply:
+            if old_snapshot is not None and not args.no_apply and not paused:
                 try:
                     _apply_saved_config(paths, config, old_snapshot, origin=old_origin)
                 except Exception as apply_exc:
@@ -393,7 +404,7 @@ def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
             raise HelperError(f"refresh failed: {exc}", code=3) from exc
         save_snapshot_file(paths.cache_file(config.appid), new_snapshot)
         diff = diff_snapshots(old_snapshot, new_snapshot)
-        if not args.no_apply:
+        if not args.no_apply and not paused:
             try:
                 _apply_saved_config(paths, config, new_snapshot, origin="cache")
             except Exception as exc:
@@ -416,6 +427,7 @@ def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
             relay_list_changed=diff.changed,
             relay_list_summary=diff.summary,
             cache=_cache_info(new_snapshot, "cache"),
+            **({"paused": True, "active": False, "blocked": [], "relay_count": 0} if paused else {}),
         )
         print(
             f"refreshed appid {config.appid}: revision {new_snapshot.revision}, "
@@ -449,15 +461,99 @@ def clear_command(paths: Paths, args: argparse.Namespace | None = None) -> int:
             paths,
             ok=True,
             active=False,
+            paused=False,
+            paused_at=None,
             backend=result.backend if result else "none",
             blocked=[],
             selected=[],
             relay_count=0,
             message=result.message if result else "no firewall backend present",
             error=None,
-            last_apply_at=utc_now(),
         )
         print(result.message if result else "no firewall backend present; nothing to clean")
+        return 0
+
+
+def pause_command(paths: Paths, args: argparse.Namespace | None = None) -> int:
+    """Remove firewall rules without dropping the saved selection.
+
+    ``clear`` means "forget everything"; ``pause`` is the temporary SDR
+    switch-off.  The selection, mode and presets stay in config so ``resume``
+    can restore exactly the same rules.
+    """
+    _require_root()
+    paths.ensure_dirs()
+    with lock(paths, timeout=LOCK_TIMEOUT):
+        config = load_config(paths, require_root=True, missing_ok=True)
+        if config is None:
+            config = default_config()
+        try:
+            backend = make_backend(config.backend)
+            result = backend.clear()
+        except BackendError as exc:
+            if not (which_fixed("nft") or which_fixed("iptables")):
+                result = None
+            else:
+                _update_state(paths, ok=False, error=str(exc), active=_safe_active(paths))
+                raise HelperError(f"pause failed: {exc}", code=2) from exc
+        stop_monitor()
+        _update_state(
+            paths,
+            ok=True,
+            active=False,
+            paused=True,
+            paused_at=utc_now(),
+            backend=result.backend if result else "none",
+            blocked=[],
+            selected=sorted(config.selection.pops),
+            mode=config.selection.mode.value,
+            relay_count=0,
+            message=result.message if result else "no firewall backend present",
+            error=None,
+        )
+        print("paused: rules removed; saved selection kept")
+        print(f"selected: {', '.join(sorted(config.selection.pops)) or '-'}")
+        return 0
+
+
+def resume_command(
+    paths: Paths,
+    args: argparse.Namespace | None = None,
+    *,
+    backend: Any = None,
+) -> int:
+    _require_root()
+    paths.ensure_dirs()
+    with lock(paths, timeout=LOCK_TIMEOUT):
+        if not _is_paused(paths):
+            print("not paused; nothing to resume")
+            return 0
+        config = load_config(paths, require_root=True, missing_ok=True)
+        if config is None:
+            config = default_config()
+        snapshot, origin, cache_warnings = load_snapshot_for_use(paths, config.appid)
+        try:
+            plan, result = _apply_plan_and_state(
+                paths, config, snapshot, origin=origin, backend=backend, paused=False
+            )
+        except Exception as exc:
+            _update_state(
+                paths,
+                ok=False,
+                active=False,
+                paused=True,
+                error=f"resume failed: {exc}",
+                last_apply_at=utc_now(),
+                cache=_cache_info(snapshot, origin, cache_warnings),
+            )
+            raise HelperError(f"resume failed: {exc}", code=2) from exc
+        _update_state(paths, last_resume_at=utc_now())
+        print(
+            f"resumed: {len(plan.blocked)} POP(s), {plan.relay_count} relay endpoint(s), "
+            f"mode={config.selection.mode.value}, backend={result.backend}"
+        )
+        for warning in (*cache_warnings, *plan.warnings):
+            print(f"warning: {warning}", file=sys.stderr)
         return 0
 
 
@@ -507,22 +603,26 @@ def status_command(paths: Paths, args: argparse.Namespace) -> int:
         "timer_active": _unit_active(UNIT_REFRESH_TIMER),
         "monitor_active": _unit_active(UNIT_MONITOR),
     }
+    paused = bool(state.get("paused", False))
+    active = bool(
+        (live or {}).get("active", state.get("active", False))
+        if isinstance(live, dict)
+        else state.get("active", False)
+    ) and not paused
     document = {
         "config": config_to_dict(config) if config else None,
         "config_error": config_error,
         "state": state,
         "live": live if isinstance(live, dict) else None,
         "persistence": persistence,
-        "active": bool(
-            (live or {}).get("active", state.get("active", False))
-            if isinstance(live, dict)
-            else state.get("active", False)
-        ),
+        "paused": paused,
+        "active": active,
     }
     if args.json:
         print(json.dumps(document, indent=2, sort_keys=True))
         return 0
     print(f"active: {'yes' if document['active'] else 'no'}")
+    print(f"paused: {'yes' if paused else 'no'}")
     print(f"backend: {state.get('backend', 'unknown')}")
     mode = state.get("mode", "unknown")
     print(f"mode: {mode}")
@@ -721,12 +821,19 @@ def build_parser() -> argparse.ArgumentParser:
     apply_parser.add_argument("--protocol", choices=[p.value for p in Protocol])
     apply_parser.add_argument("--forward", dest="forward", action="store_true", default=None)
     apply_parser.add_argument("--no-forward", dest="forward", action="store_false")
+    apply_parser.add_argument(
+        "--if-not-paused",
+        action="store_true",
+        help="no-op when blocking is paused (used by the boot service)",
+    )
 
     refresh_parser = sub.add_parser("refresh", help="fetch a fresh SDR list and re-apply")
     refresh_parser.add_argument("--no-apply", action="store_true")
     refresh_parser.add_argument("--timer", action="store_true", help="exit 0 on transient network failure")
 
-    sub.add_parser("clear", help="remove all cs2blocker firewall rules")
+    sub.add_parser("clear", help="remove all rules and empty the saved selection")
+    sub.add_parser("pause", help="remove rules but keep the saved selection")
+    sub.add_parser("resume", help="re-apply the saved selection after pause")
 
     status_parser = sub.add_parser("status", help="show state/status")
     status_parser.add_argument("--json", action="store_true")
@@ -765,6 +872,10 @@ def main(argv: list[str] | None = None) -> int:
             return refresh_command(paths, args)
         if args.command == "clear":
             return clear_command(paths, args)
+        if args.command == "pause":
+            return pause_command(paths, args)
+        if args.command == "resume":
+            return resume_command(paths, args)
         if args.command == "status":
             return status_command(paths, args)
         if args.command == "persistence":

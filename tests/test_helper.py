@@ -20,6 +20,7 @@ def namespace(**kwargs):
         "mode": None,
         "protocol": None,
         "forward": None,
+        "if_not_paused": False,
     }
     base.update(kwargs)
     return SimpleNamespace(**base)
@@ -136,6 +137,56 @@ class ApplyCommandTests(unittest.TestCase):
         state = read_json(self.paths.state_file, require_root=True)
         self.assertFalse(state["active"])
 
+    def test_pause_keeps_selection_and_resume_restores(self):
+        helper.apply_command(self.paths, namespace(pops="ams"), backend=FakeBackend())
+        before = config_to_dict(load_config(self.paths, require_root=True))
+        with mock.patch.object(helper, "make_backend", return_value=FakeBackend()):
+            rc = helper.pause_command(self.paths)
+        self.assertEqual(rc, 0)
+        self.assertEqual(config_to_dict(load_config(self.paths, require_root=True)), before)
+        state = read_json(self.paths.state_file, require_root=True)
+        self.assertTrue(state["paused"])
+        self.assertFalse(state["active"])
+        self.assertEqual(state["selected"], ["ams"])
+
+        backend = FakeBackend()
+        rc = helper.resume_command(self.paths, backend=backend)
+        self.assertEqual(rc, 0)
+        self.assertIsNotNone(backend.plan)
+        state = read_json(self.paths.state_file, require_root=True)
+        self.assertFalse(state["paused"])
+        self.assertTrue(state["active"])
+        self.assertEqual(state["blocked"], ["ams"])
+
+    def test_boot_apply_is_a_noop_while_paused(self):
+        helper.apply_command(self.paths, namespace(pops="ams"), backend=FakeBackend())
+        with mock.patch.object(helper, "make_backend", return_value=FakeBackend()):
+            helper.pause_command(self.paths)
+        backend = FakeBackend()
+        rc = helper.apply_command(
+            self.paths, namespace(pops="fra", if_not_paused=True), backend=backend
+        )
+        self.assertEqual(rc, 0)
+        self.assertIsNone(backend.plan)
+        config = load_config(self.paths, require_root=True)
+        self.assertEqual(config.selection.pops, frozenset({"ams"}))
+        state = read_json(self.paths.state_file, require_root=True)
+        self.assertTrue(state["paused"])
+
+    def test_normal_apply_unpauses(self):
+        helper.apply_command(self.paths, namespace(pops="ams"), backend=FakeBackend())
+        with mock.patch.object(helper, "make_backend", return_value=FakeBackend()):
+            helper.pause_command(self.paths)
+        helper.apply_command(self.paths, namespace(pops="ams"), backend=FakeBackend())
+        state = read_json(self.paths.state_file, require_root=True)
+        self.assertFalse(state["paused"])
+        self.assertTrue(state["active"])
+
+    def test_resume_without_pause_is_a_noop(self):
+        rc = helper.resume_command(self.paths, backend=FakeBackend())
+        self.assertEqual(rc, 0)
+        self.assertFalse(self.paths.state_file.exists())
+
     def test_failed_apply_restores_old_config(self):
         backend = FakeBackend()
         helper.apply_command(self.paths, namespace(pops="ams"), backend=backend)
@@ -191,3 +242,20 @@ class RefreshCommandTests(unittest.TestCase):
         state = read_json(self.paths.state_file, require_root=True)
         self.assertIsNone(state["refresh_error"])
         self.assertIn("revision", state["cache"])
+
+    def test_refresh_while_paused_does_not_apply(self):
+        from pathlib import Path
+
+        helper._update_state(self.paths, paused=True, active=False)
+        raw = Path("research/sdr-730-20261108.json").read_bytes()
+        args = SimpleNamespace(timer=False, no_apply=False)
+        with (
+            mock.patch.object(helper, "fetch_raw", return_value=raw),
+            mock.patch.object(helper, "_apply_saved_config") as reapply,
+        ):
+            rc = helper.refresh_command(self.paths, args)
+        self.assertEqual(rc, 0)
+        reapply.assert_not_called()
+        state = read_json(self.paths.state_file, require_root=True)
+        self.assertTrue(state["paused"])
+        self.assertFalse(state["active"])

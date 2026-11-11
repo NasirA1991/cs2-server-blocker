@@ -208,12 +208,17 @@ def collect(paths: Paths, *, privileged: bool = False) -> list[Check]:
     except Exception:
         pass
     active = bool((live or {}).get("active", (state or {}).get("active", False)))
+    paused = bool((state or {}).get("paused", False))
+    if paused:
+        active = False
     checks.append(
         Check(
             "firewall table",
-            active,
-            "cs2blocker rules are active" if active else "cs2blocker rules are not active",
-            "info" if active else "warning",
+            True if paused else active,
+            "cs2blocker rules are paused; saved selection is kept"
+            if paused
+            else ("cs2blocker rules are active" if active else "cs2blocker rules are not active"),
+            "info" if (active or paused) else "warning",
         )
     )
 
@@ -315,15 +320,26 @@ def collect(paths: Paths, *, privileged: bool = False) -> list[Check]:
 
             backend = make_backend(config.backend if config else BackendName.AUTO)
             status = backend.status()
-            checks.append(
-                Check(
-                    "backend status",
-                    status.active,
-                    f"{status.backend}: active={status.active}, blocked={len(status.blocked)}",
-                    "info" if status.active else "warning",
-                    privileged=True,
+            if paused and not status.active:
+                checks.append(
+                    Check(
+                        "backend status",
+                        True,
+                        f"{status.backend}: paused, no rules installed",
+                        "info",
+                        privileged=True,
+                    )
                 )
-            )
+            else:
+                checks.append(
+                    Check(
+                        "backend status",
+                        status.active,
+                        f"{status.backend}: active={status.active}, blocked={len(status.blocked)}",
+                        "info" if status.active else "warning",
+                        privileged=True,
+                    )
+                )
         except BackendError as exc:
             checks.append(Check("backend status", False, str(exc), "error", privileged=True))
         except Exception as exc:

@@ -376,6 +376,14 @@ def clear_command(paths: Paths, args: argparse.Namespace) -> int:
     return _run_helper(["clear"], force_sudo=args.sudo)
 
 
+def pause_command(paths: Paths, args: argparse.Namespace) -> int:
+    return _run_helper(["pause"], force_sudo=args.sudo)
+
+
+def resume_command(paths: Paths, args: argparse.Namespace) -> int:
+    return _run_helper(["resume"], force_sudo=args.sudo)
+
+
 def persistence_command(paths: Paths, args: argparse.Namespace) -> int:
     return _run_helper(["persistence", args.action], force_sudo=args.sudo)
 
@@ -424,6 +432,8 @@ def build_parser() -> argparse.ArgumentParser:
     refresh = sub.add_parser("refresh", help="fetch a fresh relay list and re-apply")
     apply_p = sub.add_parser("apply", help="re-apply the saved selection")
     clear = sub.add_parser("clear", help="remove all rules and empty the selection")
+    sub.add_parser("pause", help="remove rules but keep the saved selection")
+    sub.add_parser("resume", help="re-apply the saved selection after pause")
 
     ping = sub.add_parser("ping", help="ICMP ping POP relays")
     ping.add_argument("pops", nargs="*")
@@ -457,6 +467,8 @@ HANDLERS = {
     "refresh": refresh_command,
     "apply": apply_command,
     "clear": clear_command,
+    "pause": pause_command,
+    "resume": resume_command,
     "ping": ping_command,
     "counters": counters_command,
     "doctor": doctor_command,

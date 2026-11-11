@@ -141,6 +141,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._busy = False
         self._live: dict[str, Any] | None = None
         self._state: dict[str, Any] = {}
+        self._active = False
         self._last_counters: dict[str, int] = {}
         self._ping_generation = 0
         self._ping_outstanding = 0
@@ -351,6 +352,11 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.unblock_button.set_tooltip_text("Remove every block created by this application")
         self.unblock_button.connect("clicked", lambda *_: self._unblock_clicked())
         topbar.append(self.unblock_button)
+        self.pause_button = Gtk.Button(label="Pause")
+        self.pause_button.add_css_class("flat")
+        self.pause_button.set_tooltip_text("Remove the rules temporarily; keep the saved datacenter selection")
+        self.pause_button.connect("clicked", lambda *_: self._pause_clicked())
+        topbar.append(self.pause_button)
         content.append(topbar)
 
         map_shell = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -752,6 +758,9 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
     def _is_blocked(self, code: str) -> bool:
         return code in self.selected if self.mode is Mode.BLOCK else code not in self.selected
+
+    def _is_paused(self) -> bool:
+        return bool(self._state.get("paused", False))
 
     def _applied_blocked(self, code: str) -> bool:
         return (
@@ -1513,6 +1522,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.menu_undo_button.set_sensitive(
             installed and not self._busy and self._undo_state is not None
         )
+        paused = self._is_paused()
+        self.pause_button.set_label("Resume" if paused else "Pause")
+        self.pause_button.set_visible(installed and (paused or self._active))
+        self.pause_button.set_sensitive(installed and not self._busy)
         self.detail_toggle.set_sensitive(
             installed and not self._busy and self.focus_code in self.entry_by_code
         )
@@ -1726,7 +1739,6 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.applied_selection = set(self.selected)
             self.map.set_pending(self._pending_codes())
             self._update_stats()
-            self._update_buttons()
             self._update_status_view()
             warnings = [
                 line.removeprefix("warning: ").strip()
@@ -1804,6 +1816,39 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self._toast("All CS2 blocks removed")
         else:
             self._show_error("Unblock failed", (stderr or stdout).strip() + f"\n\nCommand:\n{command}")
+
+    def _pause_clicked(self) -> None:
+        if self._busy:
+            return
+        if self._is_paused():
+            self._run_privileged(["resume"], self._after_resume)
+            return
+        if self._dirty():
+            self._toast("Apply or discard your pending changes before pausing")
+            return
+        self._confirm(
+            "Pause blocking?",
+            "This removes every cs2blocker rule but keeps your saved datacenter "
+            "selection. Other firewall tables are untouched; resume with one click.",
+            lambda: self._run_privileged(["pause"], self._after_pause),
+        )
+
+    def _after_pause(self, result: tuple[int, str, str, str]) -> None:
+        code, stdout, stderr, command = result
+        if code == 0:
+            self._undo_state = None
+            self._update_status_view()
+            self._toast("Blocking paused — selection kept")
+        else:
+            self._show_error("Pause failed", (stderr or stdout).strip() + f"\n\nCommand:\n{command}")
+
+    def _after_resume(self, result: tuple[int, str, str, str]) -> None:
+        code, stdout, stderr, command = result
+        if code == 0:
+            self._update_status_view()
+            self._toast("Blocking resumed")
+        else:
+            self._show_error("Resume failed", (stderr or stdout).strip() + f"\n\nCommand:\n{command}")
 
     def _refresh_clicked(self) -> None:
         if self._busy:
@@ -1993,15 +2038,20 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._state = self._read_state()
         live = self._live or {}
         state = self._state
-        active = bool(live.get("active", state.get("active", False)))
+        paused = self._is_paused()
+        active = bool(live.get("active", state.get("active", False))) and not paused
         backend = live.get("backend") or state.get("backend") or "?"
         counters = {
             code: int(value.get("packets", 0))
             for code, value in (live.get("counters") or {}).items()
             if isinstance(value, dict)
         }
+        if paused:
+            counters = {}
         counters_changed = counters != self.counters
         self.counters = counters
+        self._active = active
+        self.map.set_opacity(0.55 if paused else 1.0)
         if counters_changed:
             self.map.set_counters(counters)
             self._update_sidebar_selection()
@@ -2012,6 +2062,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         blocked_count = len(live.get("blocked") or state.get("blocked") or [])
         if not self._installed():
             status = "Not installed"
+        elif paused:
+            status = "Paused · rules removed"
         elif active:
             status = f"Active · {blocked_count} blocked"
         else:
@@ -2029,6 +2081,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         )
         self._update_persistence_view()
         self._update_banner()
+        self._update_buttons()
         summary = state.get("relay_list_summary")
         last_refresh = state.get("last_refresh_at")
         if state.get("relay_list_changed") and last_refresh and last_refresh != self._seen_refresh:
@@ -2057,6 +2110,13 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         if not self._installed():
             self._banner_show("Not installed system-wide. Run: sudo ./packaging/install.sh", "")
             return
+        if self._is_paused():
+            self._banner_show(
+                "Blocking is paused. Your saved datacenter selection is kept; "
+                "press Resume to restore the same rules.",
+                "Resume",
+            )
+            return
         cache = state.get("cache") or {}
         if cache.get("stale") or self.origin == "bundled":
             self._banner_show(
@@ -2081,6 +2141,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
     def _banner_clicked(self) -> None:
         if self._state.get("error"):
             self._apply_clicked()
+        elif self._is_paused():
+            self._pause_clicked()
         else:
             self._refresh_clicked()
 
