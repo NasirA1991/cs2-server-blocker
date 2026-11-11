@@ -96,6 +96,7 @@ jobs:
           format: spdx-json
           output-file: dist/cs2blocker-${{ env.VERSION }}.spdx.json
           artifact-name: cs2blocker-sbom
+          upload-release-assets: false
       - name: Create checksums
         run: |
           cd dist
