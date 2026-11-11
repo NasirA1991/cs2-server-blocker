@@ -4,6 +4,9 @@
 set -euo pipefail
 
 if [[ -z ${CS2BLOCKER_IN_NETNS:-} ]]; then
+  if [[ ${EUID} -eq 0 ]]; then
+    exec unshare -n env CS2BLOCKER_IN_NETNS=1 bash "$0" "$@"
+  fi
   exec unshare -rn env CS2BLOCKER_IN_NETNS=1 bash "$0" "$@"
 fi
 

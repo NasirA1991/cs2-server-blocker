@@ -23,8 +23,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install test dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y nftables ipset iptables
+          # The unit suite mocks the firewall. Keep this step non-blocking so a
+          # transient runner mirror/DNS outage cannot fail the code tests.
+          sudo timeout 60 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
+          sudo timeout 120 apt-get install -y nftables ipset iptables || true
       - name: Compile
         run: python3 -m compileall -q cs2blocker tests
       - name: Unit and integration tests
@@ -40,8 +42,8 @@ jobs:
           python-version: "3.12"
       - name: Install GTK4, libadwaita and Xvfb
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-gi python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1 xvfb
+          sudo timeout 60 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
+          sudo timeout 180 apt-get install -y python3-gi python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1 xvfb
       - name: Construct the window
         env:
           GSK_RENDERER: cairo
@@ -58,8 +60,8 @@ jobs:
           python-version: "3.12"
       - name: Install nftables
         run: |
-          sudo apt-get update
-          sudo apt-get install -y nftables iproute2
+          sudo timeout 60 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
+          sudo timeout 180 apt-get install -y nftables iproute2
       - name: Apply and clear inside a network namespace
         run: sudo bash ./scripts/netns-integration.sh
 
