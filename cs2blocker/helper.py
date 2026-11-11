@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import stat
 import sys
 import time
 from dataclasses import replace
@@ -92,9 +93,12 @@ def _verify_installed_code() -> None:
         raise HelperError(f"refusing to run: no installed helper code under {code_dir}")
     for path in paths:
         try:
+            lst = path.lstat()
             st = path.stat()
         except OSError as exc:
             raise HelperError(f"cannot inspect installed helper code {path}: {exc}") from exc
+        if stat.S_ISLNK(lst.st_mode):
+            raise HelperError(f"refusing to run: installed helper code is a symlink: {path}")
         if st.st_uid != 0:
             raise HelperError(
                 f"refusing to run: installed helper code is not root-owned: {path} "
