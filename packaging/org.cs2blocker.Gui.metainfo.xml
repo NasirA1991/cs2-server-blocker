@@ -53,9 +53,9 @@
     <keyword>gaming</keyword>
   </keywords>
 
-  <url type="homepage">https://org.cs2blocker/cs2-server-blocker</url>
-  <url type="bugtracker">https://org.cs2blocker/cs2-server-blocker/issues</url>
-  <url type="vcs-browser">https://org.cs2blocker/cs2-server-blocker</url>
+  <url type="homepage">https://github.com/NasirA1991/cs2-server-blocker</url>
+  <url type="bugtracker">https://github.com/NasirA1991/cs2-server-blocker/issues</url>
+  <url type="vcs-browser">https://github.com/NasirA1991/cs2-server-blocker</url>
 
   <screenshots>
     <screenshot type="default">

@@ -1,6 +1,6 @@
 [Unit]
 Description=Publish live cs2blocker drop counters for the GUI
-Documentation=https://github.com/cs2blocker/cs2blocker
+Documentation=https://github.com/NasirA1991/cs2-server-blocker
 After=cs2blocker.service
 PartOf=cs2blocker.service
 

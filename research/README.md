@@ -1,6 +1,8 @@
 # Phase 0 evidence
 
-These files are research artifacts, not installed application code.
+These files are historical research artifacts, not installed application code.
+The current user documentation is in [`docs/`](../docs/README.md), and the
+narrative report is [`docs/phase0-research.md`](../docs/phase0-research.md).
 
 | file | purpose |
 |---|---|
@@ -37,7 +39,8 @@ unshare -rn sh -c 'ip link set lo up; TARGET_IP=127.0.0.1 bash research/phase0-n
 ```
 
 That test proves the rule/counter/cleanup mechanics without root or host impact. The
-host run is the one that still needs a sudo password.
+host run was exercised with `sudo` during Phase 0; rerun it only when revalidating the
+raw nftables mechanics.
 
 ## Why the test uses UDP
 

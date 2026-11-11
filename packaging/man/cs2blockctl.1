@@ -4,6 +4,9 @@ cs2blockctl \- manage CS2 SDR datacenter blocking rules
 .SH SYNOPSIS
 .B cs2blockctl
 [\fB\-\-sudo\fR] \fICOMMAND\fR [\fIOPTIONS\fR]
+.br
+.B cs2blockctl
+\fB\-\-version\fR
 .SH DESCRIPTION
 .B cs2blockctl
 lists CS2 SDR POPs, selects datacenters, and applies host firewall rules.
@@ -13,52 +16,92 @@ and a polkit action, or through
 .BR sudo (8)
 with \fB\-\-sudo\fR.
 .PP
-The tool only manages one nftables table,
-.IR "inet cs2blocker" .
-It does not touch the game, Steam, or other firewall tables.
+The tool manages exactly one nftables table,
+.IR "inet cs2blocker" ,
+or a single
+.I CS2BLOCKER
+iptables chain when the fallback backend is selected. It does not touch the
+game, Steam, or other firewall objects. The default rule drops SDR UDP traffic
+only; ICMP remains reachable.
+.SH OPTIONS
+.TP
+.B \-\-sudo
+Use \fBsudo\fR instead of \fBpkexec\fR for privileged commands.
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.B \-h, \-\-help
+Show command help and exit.
 .SH COMMANDS
 .TP
 .B list [\-\-region REGION] [\-\-json]
-List POPs, regions, relay counts and port ranges.
+List POPs, regions, relay counts and port ranges. This command is
+unprivileged.
 .TP
 .B status [\-\-json]
-Show active rules, selection, cache freshness and boot persistence.
+Show active rules, selection, cache freshness and boot persistence. This
+command is unprivileged.
 .TP
 .B block POP...
-Make POPs blocked. In allow-only mode this removes them from the allow list.
+Make the listed POPs blocked and apply the result. In allow-only mode this
+removes them from the allow list.
 .TP
 .B unblock POP...
-Make POPs allowed. In allow-only mode this adds them to the allow list.
+Make the listed POPs allowed and apply the result. In allow-only mode this adds
+them to the allow list.
 .TP
-.B only POP...
-Allow only the listed POPs; every other known POP is blocked.
+.B only POP... [\-\-force]
+Allow only the listed POPs; every other known POP is blocked. An empty
+selection is refused unless \fB\-\-force\fR is given; forcing an empty
+allow-list blocks every known POP.
 .TP
 .B preset [NAME] [\-\-list] [\-\-save] [\-\-delete]
-Apply or manage presets.
+Apply a preset, list presets, save the current selection under
+\fINAME\fR, or delete \fINAME\fR.
 .TP
 .B refresh
-Fetch a fresh SDR relay list and re-apply.
+Fetch a fresh SDR relay list and re-apply the saved selection unless paused.
 .TP
 .B apply
-Re-apply the saved selection.
+Apply the saved selection again. Unlike the boot service, a plain apply clears
+the paused state.
 .TP
 .B pause
-Remove all rules but keep the saved selection and presets; the boot service skips applying while paused.
+Remove the firewall rules while keeping the saved selection and presets. The
+boot service skips applying while paused.
 .TP
 .B resume
 Re-apply the saved selection after a pause.
 .TP
 .B clear
-Remove all rules and empty the saved selection.
+Remove the firewall rules and empty the saved selection. Presets are kept.
 .TP
-.B ping [POP...] [\-\-region REGION]
-ICMP-ping relay addresses (unprivileged).
+.B ping [POP...] [\-\-region REGION] [\-\-timeout SECONDS] [\-\-json]
+Send unprivileged ICMP probes to relay addresses. This is an ICMP latency
+hint, not Valve's SDR latency.
 .TP
-.B counters [\-\-watch]
-Show live per-POP drop counters.
+.B counters [\-\-json] [\-\-watch] [\-\-interval SECONDS]
+Show per-POP drop counters published by the monitor service. This command is
+unprivileged.
 .TP
-.B doctor [\-\-json]
-Run diagnostic checks.
+.B doctor [\-\-json] [\-\-privileged]
+Run diagnostic checks. \fB\-\-privileged\fR runs the checks that need root
+access.
+.TP
+.B persistence enable|disable
+Enable or disable boot persistence.
+.TP
+.B version
+Print the installed version.
+.SH PRIVILEGES
+Commands that write configuration, state or firewall rules require root. When
+run as a normal user, they re-execute through \fBpkexec\fR by default. Use
+\fB\-\-sudo\fR to force \fBsudo\fR, or run the installed helper directly as root.
+.PP
+The unprivileged commands are \fBlist\fR, \fBstatus\fR, \fBping\fR,
+\fBcounters\fR, \fBdoctor\fR without \fB\-\-privileged\fR, and
+\fBversion\fR.
 .SH FILES
 .TP
 .I /etc/cs2blocker/config.json
@@ -67,9 +110,29 @@ Root-owned selection and presets, written only by the helper.
 .I /var/lib/cs2blocker/sdr-730.json
 Root-owned cached SDR relay list.
 .TP
+.I /var/lib/cs2blocker/state.json
+Last apply, refresh and pause state.
+.TP
 .I /run/cs2blocker/status.json
-Live counters published by the monitor service.
+Live counters and backend status published by the monitor service.
+.SH EXAMPLES
+.TP
+.B cs2blockctl list \-\-region Europe
+List European POPs.
+.TP
+.B sudo cs2blockctl only sto sto2
+Allow only the two Stockholm POPs and apply.
+.TP
+.B sudo cs2blockctl pause
+Remove the current rules but preserve the saved selection.
+.TP
+.B cs2blockctl counters \-\-watch
+Follow the live per-POP counters.
 .SH SEE ALSO
 .BR nft (8),
 .BR pkexec (1),
+.BR sudo (8),
 .BR systemctl (1)
+.PP
+Project documentation:
+.IR https://github.com/NasirA1991/cs2-server-blocker

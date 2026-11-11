@@ -9,7 +9,7 @@ blocking happens in the host network stack.
 
 ## 1. Architecture
 
-```
+```text
 ┌───────────────────────┐   read-only files    ┌──────────────────────────────┐
 │ GUI (GTK4, user)      │◀────────────────────▶│ /etc/cs2blocker/config.json  │
 │ CLI (cs2blockctl)     │                      │ /var/lib/cs2blocker/…        │
@@ -77,9 +77,10 @@ target directory, `fsync`, `os.replace`, then directory `fsync`.
   comments; `revision` must be an integer; `fetched_at` is set locally.
 
 **Elevation.** One polkit action `org.cs2blocker.helper` with
-`<allow_active>auth_admin_keep</allow_active>` and an
-`org.freedesktop.policykit.exec.path` annotation pointing at the installed helper. The
-GUI calls `pkexec` only for Apply / Unblock / persistence changes. If no polkit agent is
+`<allow_active>auth_admin_keep</allow_active>`, `<allow_inactive>no</allow_inactive>`, and
+an `org.freedesktop.policykit.exec.path` annotation pointing at the installed helper.
+The GUI calls `pkexec` only for explicit privileged actions: Apply, Unblock all,
+Pause/Resume, refresh, preset save/delete and persistence changes. If no polkit agent is
 running, the GUI shows the exact `sudo cs2blockctl …` fallback; the CLI prints the
 equivalent helper command. The helper also works as root under systemd/sudo with no
 polkit at all.
@@ -257,12 +258,14 @@ not make the weekly timer red); `doctor`/GUI surface the stale state.
 
 Non-systemd (Artix/OpenRC, Void/runit, Alpine/OpenRC): run the same `apply` from the
 local init after the network/firewall service; `persistence`/`monitor` degrade
-gracefully. README will carry one example per init.
+gracefully. The [installation guide](installation.md#non-systemd-systems) carries an
+OpenRC example and runit/scheduler notes.
 
-Removal: `sudo cs2blockctl clear` deletes only our table, stops the monitor and empties
-the saved selection. `sudo ./uninstall.sh` disables/removes units, polkit policy, desktop
-file, icon, `/usr/lib/cs2blocker`, and optionally `/etc/cs2blocker` +
-`/var/lib/cs2blocker`; it deletes only our table, never flushes.
+Removal: `sudo cs2blockctl clear` deletes only our nftables table or iptables chain,
+stops the monitor and empties the saved selection. `sudo ./packaging/uninstall.sh` disables/removes units, polkit
+policy, desktop file, icon, `/usr/lib/cs2blocker`, and optionally `/etc/cs2blocker` +
+`/var/lib/cs2blocker`; it deletes only our table, never flushes. Package removal runs the
+same kind of best-effort teardown before the helper disappears.
 
 ---
 
@@ -274,16 +277,19 @@ Core data model: `SdrSnapshot(revision, fetched_at, source, pops)`,
 `Selection(mode, pops, block_forward, protocol)`, and
 `Config(selection, presets, backend, notify_on_change)`.
 
-```
+```text
 repo/
   cs2blocker/
-    core/{model,regions,sdr,ruleset,state,util}.py
+    core/{model,regions,sdr,ruleset,state,util,presets}.py
+    core/{config,diagnostics,selection}.py
     core/backends/{base,nft,iptables}.py
     data/{sdr-730.json,presets.toml}
-    helper.py  cli.py  gui/
-  packaging/{PKGBUILD,install.sh,uninstall.sh,polkit/,systemd/}
+    gui/{app,worldmap,map_data,locations}.py
+    helper.py  cli.py  i18n.py
+  packaging/{PKGBUILD,nfpm.yaml,install.sh,uninstall.sh,polkit/,systemd/,
+             org.cs2blocker.Gui.metainfo.xml,completions/,man/}
   tests/{fixtures/,test_*.py}
-  docs/{phase0-research.md,design.md}
+  docs/{README,installation,usage,troubleshooting,development,design,phase0-research}.md
   research/           # Phase 0 evidence, not installed
   README.md
 
@@ -294,14 +300,19 @@ installed/
                            cs2blocker-refresh.timer,cs2blocker-monitor.service}
   /usr/share/polkit-1/actions/org.cs2blocker.policy
   /usr/share/applications/org.cs2blocker.Gui.desktop
+  /usr/share/metainfo/org.cs2blocker.Gui.metainfo.xml
+  /usr/share/man/man1/cs2blockctl.1
+  /usr/share/bash-completion/completions/cs2blockctl
+  /usr/share/zsh/site-functions/_cs2blockctl
+  /usr/share/fish/vendor_completions.d/cs2blockctl.fish
   /usr/share/icons/hicolor/scalable/apps/cs2blocker.svg
   /etc/cs2blocker/config.json          # runtime, 0644, helper-only writes
   /var/lib/cs2blocker/{sdr-730.json,state.json}
   /run/cs2blocker/{status.json,lock}
 ```
 
-Packages install but **enable nothing**. The first Apply or an explicit
-`systemctl enable` turns on boot persistence.
+Packages install but **enable nothing**. Boot persistence stays off until you
+run `systemctl enable` explicitly or use the GUI's persistence switch.
 
 ---
 
@@ -392,20 +403,26 @@ helper argument rejection (raw IPs/paths), backend detection with mocks. Integra
 ruleset leaves old table, unrelated dummy table survives, iptables fallback in a
 container. Real host: Phase 0 script, install, reboot simulation via
 `systemctl restart`, `ufw reload` survival, queue CS2 and watch counters, clear,
-reboot, uninstall. Cross-distro later: Debian 12 (nft 1.0.6), Ubuntu 22.04 (1.0.2),
-Fedora/firewalld, openSUSE, Alpine/Artix/Void.
+reboot, uninstall. Cross-distro runtime testing remains: Debian 12 (nft 1.0.6),
+Ubuntu 22.04 (1.0.2), Fedora/firewalld, openSUSE, Alpine/Artix/Void. CI builds and
+tests in Arch/Ubuntu containers, but that is not a substitute for a full desktop/init
+test on each distribution.
 
 **Packaging.** Arch `PKGBUILD`; generic `install.sh`/`uninstall.sh`; `.deb`/`.rpm` via
-nfpm later. Dependencies: `python`, `nftables`, `python-gobject`, `gtk4`, `libadwaita`,
-`polkit`; optional `ipset`. Flatpak/AppImage cannot install a root helper, polkit action
-or systemd units and cannot manage the host firewall; README recommends native packages
-and explains why an AppImage could only be a client for an already-installed helper.
+`nfpm` in CI; signed GitHub release artifacts and AUR publication. Dependencies:
+`python`, `nftables`, `python-gobject`, `python-cairo`, `gtk4`, `libadwaita`,
+`polkit`; `systemd` for persistence/monitor features; optional `ipset` for the
+fallback backend.
+Flatpak/AppImage cannot install a root helper or polkit action and cannot manage the
+host firewall; the [installation guide](installation.md) explains why native packages
+are required.
 
-**Open decisions:**
+**Decisions and remaining work:**
 
-1. GTK4/libadwaita vs Qt6/PySide6 (GTK chosen; KDE-native trade-off above).
-2. UDP-only default (recommended) vs all protocols.
-3. Monitor service for live counters (recommended) vs counters only after Apply.
-4. Real-host test: passed (see `docs/phase0-research.md` §3.4).
-5. Paste the CLI tool you mentioned for a real review before Phase 1.
-6. Phase 7 stays out of scope unless explicitly requested.
+1. GTK4/libadwaita vs Qt6/PySide6: GTK chosen; the KDE trade-off is above.
+2. UDP-only default: chosen. The helper retains an explicit all-protocol escape hatch.
+3. Monitor service for live counters: chosen.
+4. Real-host test: passed (see [`docs/phase0-research.md` §3.4](phase0-research.md)).
+5. Remaining: per-process/cgroup scoping, true SDR RTT, GUI module split, CLI/GUI package
+   split and broader cross-distro testing. The README roadmap tracks the user-visible
+   items.

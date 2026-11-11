@@ -4,7 +4,7 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
   <vendor>CS2 Server Blocker</vendor>
-  <vendor_url>https://github.com/cs2blocker/cs2blocker</vendor_url>
+  <vendor_url>https://github.com/NasirA1991/cs2-server-blocker</vendor_url>
 
   <action id="org.cs2blocker.helper">
     <description>Manage CS2 datacenter blocking firewall rules</description>

@@ -4,10 +4,11 @@
 
 Please do not open a public issue for a vulnerability that could let a local
 user gain privileges, bypass the firewall, or corrupt root-owned state. Use
-GitHub's **Report a vulnerability** flow on the repository's Security tab, or
-email the maintainer at `nasir@users.noreply.github.com`. Include the version,
-distribution, and a minimal reproduction. You can expect an initial reply
-within a few days.
+GitHub's **Report a vulnerability** flow on the repository's Security tab. If
+that flow is unavailable, open a minimal public issue asking for a private
+contact channel; do not include exploit details in the issue. Include the
+version, distribution, and a minimal reproduction. You can expect an initial
+reply within a few days.
 
 ## Threat model
 
@@ -16,12 +17,13 @@ CS2 Server Blocker has two pieces:
 - The unprivileged GUI/CLI, which parses Valve's relay data and asks for an
   action.
 - A small root helper, started through polkit or `sudo`, which validates the
-  request and writes nftables rules.
+  request and writes nftables rules (or the iptables/ipset fallback).
 
 The helper treats Valve's API response and all command-line input as
 untrusted. It validates POP codes, relay addresses, ports, modes, and file
 sizes before rendering rules. It owns exactly one nftables table,
-`inet cs2blocker`, and never runs `nft flush ruleset`.
+`inet cs2blocker`, or one iptables chain (`CS2BLOCKER`) in fallback mode, and
+never runs `nft flush ruleset`.
 
 The helper's Python files must be root-owned and not group/world-writable.
 Packages install them that way; `packaging/install.sh` explicitly drops the

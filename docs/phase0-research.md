@@ -1,8 +1,8 @@
 # Phase 0 — Research and feasibility
 
 **Status:** Phase 0 complete — real-host test passed. The project was subsequently
-implemented end-to-end on the instruction to finish autonomously; this document is kept
-as the research evidence.
+implemented end-to-end; this document is kept as the historical research evidence. For
+current installation and usage, start with the [documentation index](README.md).
 **Date:** 2026-11-08
 **Host used for research:** CachyOS (Arch-based), KDE Plasma on Wayland, kernel 7.3.1,
 nftables 1.1.7, Python 3.14.9, ufw 0.36.2 active, `nftables.service` inactive.
@@ -10,8 +10,7 @@ nftables 1.1.7, Python 3.14.9, ufw 0.36.2 active, `nftables.service` inactive.
 **Verdict:** the project is feasible with the design in [design.md](design.md). Every
 mechanism that matters was exercised on this machine: the live Valve endpoint, all 220
 relay IPs, unprivileged ICMP, named nftables counters, atomic ruleset replacement, and
-the drop/cleanup cycle. The privileged host test was run by you on the real host and
-passed: ICMP kept working, UDP was dropped with `EPERM`, the named counter incremented,
+the drop/cleanup cycle. The privileged host test was run on the real host and passed: ICMP kept working, UDP was dropped with `EPERM`, the named counter incremented,
 and cleanup restored UDP. That closes the last open feasibility question. The netns run
 and the real host output are both recorded in §3.
 
@@ -21,7 +20,7 @@ and the real host output are both recorded in §3.
 
 ### 1.1 Endpoint
 
-```
+```http
 GET https://api.steampowered.com/ISteamApps/GetSDRConfig/v1/?appid=730
 ```
 
@@ -43,7 +42,7 @@ Observed response (2026-11-08):
 
 A bad appid produces **HTTP 500** with a JSON body, not an HTTP 200 with `success:false`:
 
-```
+```console
 $ curl -sS 'https://api.steampowered.com/ISteamApps/GetSDRConfig/v1/?appid=999999999'
 {"success":false,"message":"Failed to get appinfo"}
 ```
@@ -56,7 +55,7 @@ pages must all be treated as a failed refresh.
 
 From the real document, top-level keys are:
 
-```
+```text
 certs, p2p_share_ip, pops, relay_public_key, revision, revoked_keys, success, typical_pings
 ```
 
@@ -109,7 +108,7 @@ Facts that matter for the design:
 
 The eight POPs with no relay entries in this snapshot are:
 
-```
+```text
 ctu (Alibaba Cloud Chengdu), dsto (Datapacket Stockholm), eat (Wenatchee),
 fsn (Hetzner Falkenstein), hel (Hetzner Helsinki), pek (Alibaba Cloud Beijing),
 pvg (Alibaba Cloud Shanghai), tgd (Tencent Guangzhou)
@@ -400,7 +399,7 @@ One version caveat found during research:
 
 Yes, overwhelmingly. I sent one unprivileged ICMP echo to each of the 220 relay IPs:
 
-```
+```text
 219 / 220 replied (1 s timeout)
 ```
 
@@ -410,7 +409,7 @@ answered.
 
 ### 4.2 Unprivileged ICMP works on this host
 
-```
+```console
 $ sysctl net.ipv4.ping_group_range
 net.ipv4.ping_group_range = 0    2147483647
 $ getcap /usr/bin/ping        # empty; not setuid either
