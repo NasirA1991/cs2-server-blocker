@@ -152,11 +152,32 @@ Do not build release packages on a development machine. CI is the source of
 published artifacts; local package builds are only for testing the packaging
 scripts.
 
+### Verify a published release
+
+Download the assets from the release page, then check the checksums and the
+keyless signature from this repository's release workflow:
+
+```bash
+sha256sum -c SHA256SUMS
+cosign verify-blob \
+  --certificate SHA256SUMS.pem \
+  --signature SHA256SUMS.sig \
+  --certificate-identity-regexp 'https://github.com/NasirA1991/cs2-server-blocker/.github/workflows/release.yml@refs/tags/v.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  SHA256SUMS
+```
+
+The SPDX JSON (`cs2blocker-<version>.spdx.json`) is the SBOM. The AUR package is
+published from the same tag by `aur.yml`; do not hand-edit AUR files for a
+release unless the workflow failed and the maintainer has decided to recover
+manually.
+
 ## Documentation
 
 - `README.md` is the primary entry point and should stay short enough to scan.
-- Detailed instructions belong in `docs/installation.md`, `docs/usage.md` and
-  `docs/troubleshooting.md`.
+- Detailed instructions belong in `docs/INSTALLATION.md`, `docs/USAGE.md`,
+  `docs/CLI.md`, `docs/FIREWALL.md` and `docs/TROUBLESHOOTING.md`.
+- Non-systemd startup and scheduling belongs in `docs/NON_SYSTEMD.md`.
 - `docs/design.md` is the technical reference; update it when the architecture,
   privilege model, rule format or file layout changes.
 - `docs/phase0-research.md` is a historical research record. Do not rewrite it

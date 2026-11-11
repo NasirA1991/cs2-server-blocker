@@ -118,6 +118,27 @@ rules for the same relay ports.
 If all counters stay at zero, check the selected POP code and the applied
 selection before assuming the rule is broken.
 
+## Virtual machines and containers
+
+The default block is in the host's `output` hook, so it applies to traffic the
+host itself sends. A game running inside a VM or container is usually forwarded
+by the host; the host output rule will not match it.
+
+1. Confirm the traffic path. If the guest has its own public/relay-facing
+   network, the host may be routing it. If the container uses host networking,
+   the normal output rule can match.
+2. For a routed VM/container, enable the optional forward chain:
+   `sudo /usr/lib/cs2blocker/cs2blocker-helper apply --forward`. The persistent
+   form is `selection.block_forward = true`.
+3. Make sure forwarding and the required routes/NAT are configured outside this
+   project. CS2 Server Blocker does not create bridges, routes or NAT rules.
+4. Verify with `cs2blockctl counters` and the host's nftables/iptables rules,
+   not only with a ping from inside the guest.
+
+See [Firewall: forwarding](FIREWALL.md#forwarding-vms-and-containers) for the
+rule model. A host-only block cannot reliably filter traffic that bypasses the
+host network namespace.
+
 ## Permission errors and ping
 
 ### `PermissionError` or `EPERM` from a game or test
@@ -147,7 +168,7 @@ cs2blocker-gui
 
 Common causes are missing GTK4, PyGObject, `python-cairo`, or libadwaita older
 than 1.5. Install the dependencies from the
-[installation guide](installation.md#package-dependencies-for-manual-installs).
+[installation guide](INSTALLATION.md#package-dependencies-for-manual-installs).
 The GUI does not need root; only Apply and other privileged actions do.
 
 ### The window uses the wrong theme
@@ -220,7 +241,7 @@ Presets are not deleted by `clear`.
 ## Systemd is not available
 
 The helper and CLI work without systemd. Use the init-system commands in the
-[installation guide](installation.md#non-systemd-systems). Boot persistence,
+[non-systemd guide](NON_SYSTEMD.md). Boot persistence,
 the weekly timer and the GUI's live monitor are systemd-specific.
 
 ## Uninstall or reset
@@ -237,7 +258,7 @@ To remove the rules and forget the saved selection as well:
 sudo cs2blockctl clear
 ```
 
-To remove the application, see [Removal](installation.md#removal). Do not run
+To remove the application, see [Removal](INSTALLATION.md#removal). Do not run
 `nft flush ruleset`; it would remove unrelated firewall rules.
 
 For a failed upgrade, reinstall the package or rerun the installer, then:

@@ -29,7 +29,7 @@
     </p>
     <ul>
       <li>Interactive, zoomable map of Valve's SDR datacenters</li>
-      <li>Block list, allow-only list, and region-wide actions</li>
+      <li>Per-POP block/allow selection, allow-only lists, and region-wide actions</li>
       <li>Visibility into relay addresses, ports, latency, and drops</li>
       <li>nftables with an iptables/ipset fallback</li>
     </ul>
@@ -59,8 +59,8 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/NasirA1991/cs2-server-blocker/master/docs/screenshot.png</image>
-      <caption>The datacenter map and country panel</caption>
+      <image>https://raw.githubusercontent.com/NasirA1991/cs2-server-blocker/master/docs/screenshots/main.png</image>
+      <caption>The interactive datacenter map and Datacenters sidebar</caption>
     </screenshot>
   </screenshots>
 

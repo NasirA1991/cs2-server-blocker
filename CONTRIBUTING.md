@@ -6,7 +6,7 @@ more than volume.
 
 ## Before you start
 
-- Read the [README](README.md), [usage guide](docs/usage.md) and
+- Read the [README](README.md), [usage guide](docs/USAGE.md) and
   [design notes](docs/design.md) for the area you are changing.
 - Check existing issues and pull requests before opening a new one.
 - For a security problem, follow [SECURITY.md](SECURITY.md) instead of opening
@@ -26,13 +26,13 @@ Include:
 - relevant `journalctl` output, with personal data removed.
 
 A minimal reproduction is more useful than a screenshot alone. See
-[docs/troubleshooting.md](docs/troubleshooting.md) for the diagnostics the
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the diagnostics the
 project normally asks for.
 
 ## Development setup
 
 The prerequisites and test commands are in
-[docs/development.md](docs/development.md). In short:
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). In short:
 
 ```bash
 git clone https://github.com/NasirA1991/cs2-server-blocker.git
@@ -82,7 +82,7 @@ tested. If a test cannot run on the contributor's machine, say so explicitly.
 Release artifacts are built by GitHub Actions, not by contributors. Do not add
 local package binaries, generated archives or signing keys to a pull request.
 The maintainer handles version bumps, tags and AUR publication as described in
-[docs/development.md](docs/development.md).
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## License
 

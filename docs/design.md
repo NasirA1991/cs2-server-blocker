@@ -253,12 +253,14 @@ the cache (or bundled snapshot on first run), validates, generates, checks, appl
 the cache is stale, the old rules still apply and `state.json` records it.
 
 `refresh` fetches, validates, atomically replaces the cache, then re-applies. On
-failure it keeps cache and rules, records the error and exits 0 (a Valve hiccup should
-not make the weekly timer red); `doctor`/GUI surface the stale state.
+failure it keeps the cache and rules and records the error. The CLI form exits 3;
+the systemd timer passes `--timer`, which records the failure but exits 0 so a
+Valve outage does not make the weekly timer red. `doctor`/GUI surface the stale
+state.
 
 Non-systemd (Artix/OpenRC, Void/runit, Alpine/OpenRC): run the same `apply` from the
 local init after the network/firewall service; `persistence`/`monitor` degrade
-gracefully. The [installation guide](installation.md#non-systemd-systems) carries an
+gracefully. The [non-systemd guide](NON_SYSTEMD.md) carries an
 OpenRC example and runit/scheduler notes.
 
 Removal: `sudo cs2blockctl clear` deletes only our nftables table or iptables chain,
@@ -289,7 +291,7 @@ repo/
   packaging/{PKGBUILD,nfpm.yaml,install.sh,uninstall.sh,polkit/,systemd/,
              org.cs2blocker.Gui.metainfo.xml,completions/,man/}
   tests/{fixtures/,test_*.py}
-  docs/{README,installation,usage,troubleshooting,development,design,phase0-research}.md
+  docs/{README,INSTALLATION,USAGE,CLI,FIREWALL,TROUBLESHOOTING,NON_SYSTEMD,DEVELOPMENT,design,phase0-research}.md
   research/           # Phase 0 evidence, not installed
   README.md
 
@@ -414,7 +416,7 @@ test on each distribution.
 `polkit`; `systemd` for persistence/monitor features; optional `ipset` for the
 fallback backend.
 Flatpak/AppImage cannot install a root helper or polkit action and cannot manage the
-host firewall; the [installation guide](installation.md) explains why native packages
+host firewall; the [installation guide](INSTALLATION.md) explains why native packages
 are required.
 
 **Decisions and remaining work:**

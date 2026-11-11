@@ -189,50 +189,13 @@ sudo cs2blockctl apply
 
 ## Non-systemd systems
 
-Artix (OpenRC), Void (runit), Alpine (OpenRC) and similar systems can run the
-helper and CLI. The packaged builds declare systemd as a dependency because they
-install unit files, so use `packaging/install.sh` from the source tarball on a
-system that does not provide systemd. Boot persistence and the weekly timer
-depend on systemd, so use the local init system or a scheduler instead.
+systemd is optional: it provides boot persistence, the weekly refresh timer and
+the live counter monitor. The helper and CLI work with OpenRC, runit or another
+init system. Use the source installer rather than a package whose dependencies
+pull in systemd, then provide startup and scheduling yourself.
 
-The helper is installed at
-`/usr/lib/cs2blocker/cs2blocker-helper`. For a non-systemd service that calls
-`pause` on stop, call plain `apply` on start so the saved selection is restored
-and the pause flag is cleared. Do not pair `pause` with `apply --if-not-paused`;
-that combination intentionally skips the apply and is meant for systemd boot,
-where a manual pause must survive.
-
-**OpenRC example** (`/etc/init.d/cs2blocker`):
-
-```sh
-#!/sbin/openrc-run
-description="CS2 Server Blocker firewall rules"
-depend() {
-    need net
-    after nftables
-}
-start() {
-    /usr/lib/cs2blocker/cs2blocker-helper apply
-}
-stop() {
-    /usr/lib/cs2blocker/cs2blocker-helper pause
-}
-```
-
-```bash
-sudo chmod +x /etc/init.d/cs2blocker
-sudo rc-update add cs2blocker default
-```
-
-**runit:** run `/usr/lib/cs2blocker/cs2blocker-helper apply` from
-`/etc/rc.local` or a oneshot service, and call `pause` to stop without losing
-the saved selection. As above, `apply --if-not-paused` is for systemd boot, not
-this `pause`/`apply` pairing.
-
-**Weekly refresh:** schedule
-`/usr/lib/cs2blocker/cs2blocker-helper refresh --timer` with cron or another
-scheduler. The GUI's persistence control and live monitor require systemd; the
-CLI commands `apply`, `pause`, `resume`, `clear` and `refresh` still work.
+See the [non-systemd guide](NON_SYSTEMD.md) for OpenRC, runit, Alpine, Artix,
+Void, pause-across-reboot behaviour, cron refresh and monitor supervision.
 
 ## Upgrade
 
@@ -350,6 +313,7 @@ firewall rules. The uninstaller and package removal hooks delete only
 
 ## Next steps
 
-- [First use and CLI](usage.md)
-- [Troubleshooting](troubleshooting.md)
+- [First use and GUI](USAGE.md)
+- [CLI reference](CLI.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
 - [Security model](../SECURITY.md)

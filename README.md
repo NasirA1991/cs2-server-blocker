@@ -7,117 +7,135 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 CS2 Server Blocker is a Linux firewall manager for choosing which
-Counter-Strike 2 Steam Datagram Relay (SDR) datacenters the game can reach. It
+Counter-Strike 2 Steam Datagram Relay (SDR) datacenters the host can reach. It
 shows Valve's relay network on an interactive world map, lets you allow or block
-individual POPs, and applies the selection through the host firewall (nftables
-by default, with an iptables/ipset fallback). It does not modify the game,
-Steam, or any other firewall object.
+individual POPs, and applies the resulting UDP firewall rules through nftables
+or an iptables/ipset fallback. It does not edit `/etc/nftables.conf` or flush
+unrelated rules; the nftables backend touches only its own table.
 
-![CS2 Server Blocker: world map, datacenter sidebar and selected datacenter](docs/screenshot.png)
+> **Host-wide firewall warning**
+>
+> This application installs rules in the **host network namespace**. The rules
+> are **not scoped to CS2**, a process, a cgroup, or a Steam account, and
+> per-process/cgroup isolation is **not implemented**. Blocking an SDR POP can
+> affect every local application that uses Steam Datagram Relay — including
+> Dota 2, Team Fortress 2, Deadlock, and Steam features — not only CS2.
+>
+> `pause` removes the active rules temporarily while preserving the saved
+> selection; `resume` reapplies that selection. The default UDP-only mode drops
+> SDR relay traffic on the relay port range. It leaves ICMP, Steam downloads,
+> and ordinary voice traffic alone. It is not a VPN: it does not hide your IP
+> address or change your route.
 
-*The GTK4 interface with the world map, datacenter panel and inspector. See the
-[animated demo](docs/demo.gif).*
+![CS2 Server Blocker main window with the world map, datacenter markers and Datacenters sidebar](docs/screenshots/main.png)
 
-> **Scope:** CS2 Server Blocker is a firewall rule manager. It does not read,
-> modify, inject into, or locate the game, its files, its memory, or Steam. It
-> never runs `nft flush ruleset`; the only nftables object it owns is
-> `inet cs2blocker` (the iptables fallback owns a `CS2BLOCKER` chain).
 
-## Features
+| Datacenter inspector | Region selection and pending changes |
+| --- | --- |
+| ![Inspector for Kista, Sweden showing a blocked state, ICMP latency and drop count](docs/screenshots/inspector.png) | ![Europe selected with pending changes and the Apply/Revert bar](docs/screenshots/region.png) |
 
-### Pick datacenters visually
+## What it does
 
-- An interactive world map with one marker per POP that has relay endpoints.
-  Click a marker to toggle its state, click a cluster to inspect the POPs it
-  contains, drag to pan, and scroll to zoom.
-- A searchable **Datacenters** panel grouped by continent and country, with
-  collapsible sections, per-country and per-continent bulk actions, and
-  name/ping sorting. The inspector summarizes the focused POP; its **Details**
-  section lists relay addresses and ports and reports drop counters.
-- Allowed POPs, blocked POPs, mixed clusters and pending edits have distinct
-  marker styles, so the map always shows the difference between the applied
-  state and unsaved changes.
-- A latency-cap slider previews which POPs would be affected and turns the
-  result into pending changes for review.
+### Interactive datacenter management
 
-### Control the firewall explicitly
+- A Cairo-rendered world map with one marker per POP that has relay endpoints.
+  Click a marker to toggle it, click a cluster to inspect its POPs, scroll to
+  zoom, drag to pan, or use the map controls.
+- A searchable **Datacenters** sidebar grouped by continent and country, with
+  collapsible sections, per-country and per-continent actions, and name/ping
+  sorting.
+- An inspector for the focused POP: city and country, Allowed/Blocked state,
+  ICMP latency, drop count, relay count and UDP port range. **Details** reveals
+  the region, relay count and ports.
 
-- **Allowed / Blocked** is the primary state everywhere; a checked row means
-  allowed. There is no hidden "block list vs allow list" switch in normal use.
-- **Apply** is the only action that commits pending selection edits. Pending
-  changes, **Revert**, and the number of unsaved edits remain visible until you
-  apply or discard them.
-- SDR matchmaking and relay measurement use UDP. The default rule therefore
-  disables a POP without blocking ICMP, so the latency readout remains
-  available while a POP is blocked.
-- Boot persistence and a weekly relay-list refresh are available through
-  systemd. The app can also operate without persistence or systemd.
-- **Pause** removes the firewall rules while keeping the saved selection;
-  **Resume** restores it. **Unblock all** is the full reset that also forgets
-  the selection.
+### Region and bulk selection
 
-### Work from the GUI or the terminal
+- Region chips, built-in presets, **Allow all** / **Block all**, and a
+  right-click **Block all except…** action.
+- A latency-cap slider that previews which POPs would change. **Apply cap**
+  turns the preview into pending edits; it does not commit them.
+- Pending changes are never mixed with the applied state. The map uses distinct
+  marker styles for allowed, blocked, mixed clusters and pending edits.
 
-- GTK4/libadwaita GUI with keyboard navigation, map zoom controls, native
-  dialogs, light/dark theme support, and a responsive datacenter panel.
-- `cs2blockctl` provides the same selection, apply, pause, resume, refresh,
-  status, ping, counter and diagnostic operations for scripts and remote use.
-- Presets, Bash/Zsh/Fish completions, AppStream metadata, and a desktop
-  launcher are included.
+### Explicit firewall changes
+
+- **Apply** is the only action that commits pending selection changes.
+  **Revert** discards them.
+- Default rules are **UDP-only** on the SDR relay port range. Blocking a POP does
+  not block ICMP, so the latency readout remains available.
+- **Pause** removes active rules but keeps the saved selection. **Resume**
+  restores it. **Clear** (GUI: **Unblock all**) removes the rules and forgets the
+  saved selection; presets remain.
+- Boot persistence and weekly relay-list refresh are available through systemd.
+  They are optional, and the application works without either.
+
+### CLI and diagnostics
+
+- `cs2blockctl` exposes selection, apply, pause/resume, presets, refresh, status,
+  ping, counters and doctor checks for scripts and remote sessions.
+- Per-POP nftables counters, live monitor output, machine-readable JSON and
+  Bash/Zsh/Fish completions.
+- Native GTK4/libadwaita dialogs, light/dark theme support, AppStream metadata,
+  and a desktop launcher.
 
 ## Requirements
 
 | Component | Requirement |
 | --- | --- |
-| System | Linux with nftables; iptables + ipset is a fallback when nftables is unavailable |
+| System | Linux with nftables; iptables + ipset as fallback |
 | Helper and CLI | Python 3.11 or newer |
 | GUI | GTK4, libadwaita 1.5 or newer, PyGObject and `python-cairo` |
 | Elevation | polkit with an authentication agent, or `sudo` |
-| Boot persistence | systemd (optional; the GUI and CLI also work without it) |
+| Persistence | systemd for boot persistence, the refresh timer and the monitor (optional) |
 
-The distro-specific package names, optional dependencies, and non-systemd setup
-are in the [installation guide](docs/installation.md).
+The GUI and CLI do not run as root. Firewall changes go through the installed
+helper, elevated with polkit or `sudo`; the counter monitor is a separate
+sandboxed root service.
 
 ## Install
 
-The easiest path is the package for your distribution. Download it from the
-[latest release](https://github.com/NasirA1991/cs2-server-blocker/releases/latest)
-and install it locally:
+All release artifacts are built by GitHub Actions and published on the
+[latest release](https://github.com/NasirA1991/cs2-server-blocker/releases/latest):
 
-| Distribution | Command |
+| Distribution | Install |
 | --- | --- |
-| Arch Linux, CachyOS, Manjaro | `yay -S cs2blocker` |
+| Arch Linux, CachyOS, Manjaro | `yay -S cs2blocker` (AUR), or `sudo pacman -U cs2blocker-*.pkg.tar.zst` |
 | Debian, Ubuntu, Linux Mint | `sudo apt install ./cs2blocker_*_amd64.deb` |
 | Fedora, RHEL-compatible | `sudo dnf install ./cs2blocker-*x86_64.rpm` |
-| Other distributions | extract the tarball and run `sudo ./packaging/install.sh` |
+| Other distributions | source tarball + `sudo ./packaging/install.sh` |
 
-Packages install the application but do not enable or start systemd units. To
-keep the selection active across reboots and refresh Valve's relay list
-periodically:
+Packages are currently published for the architectures shown above: Debian
+`amd64`, RPM `x86_64`, and an Arch `any` package. There is **no Flatpak or
+AppImage** build: those sandboxes cannot install the root helper and polkit
+action required to manage the host firewall.
+
+Installing the package does **not** enable boot persistence or the weekly
+refresh. To opt in:
 
 ```bash
 sudo systemctl enable --now cs2blocker.service
 sudo systemctl enable --now cs2blocker-refresh.timer
-cs2blocker-gui
 ```
 
-The first **Apply** asks for authentication through polkit. On a minimal
-window manager without a polkit agent, run `sudo cs2blockctl apply`, or use
-`cs2blockctl --sudo ...` for CLI operations.
+On a non-systemd system, use the source installer and the init-system guidance
+in the [non-systemd guide](docs/NON_SYSTEMD.md). On a minimal window manager
+without a polkit agent, use `sudo cs2blockctl apply`, or
+`cs2blockctl --sudo apply`.
 
-See the [installation guide](docs/installation.md) for dependencies,
-manual installation, non-systemd systems, upgrades and removal.
+See the [installation guide](docs/INSTALLATION.md) for dependencies, release
+verification, upgrades and removal.
 
 ## First use
 
-1. Start `cs2blocker-gui`.
-2. Click a datacenter marker, a region chip, or a row in the **Datacenters**
-   panel. The inspector shows the city, country, status, ICMP latency and drop
-   count. Use **Details** for relay addresses and ports.
-3. Press **Apply** to commit the pending selection. Pause removes the rules
-   without losing the selection; Resume restores them.
+1. Start `cs2blocker-gui`, then click a marker, a region chip, or a row in the
+   **Datacenters** panel. The inspector shows the focused POP; use **Details**
+   for relay information.
+2. Make all desired edits. The pending bar shows how many changes are unsaved.
+3. Press **Apply**. Authenticate through polkit when prompted.
+4. To stop filtering temporarily, use **Pause**. Use **Resume** to restore the
+   saved selection, or **Unblock all** (CLI: `clear`) to remove the rules and forget it.
 
-A minimal CLI session:
+A small CLI session:
 
 ```bash
 cs2blockctl list --region Europe
@@ -128,48 +146,53 @@ sudo cs2blockctl resume
 ```
 
 `block` and `unblock` are mode-aware: they change the current selection without
-silently turning an allow-list into a block-list. See the
-[usage and CLI reference](docs/usage.md) for all commands, presets, counters and
-diagnostics.
+silently converting an allow-list into a block-list. See the
+[CLI reference](docs/CLI.md) for every command and option.
 
-## How it works
+## Pause, resume and clear
 
-- The helper fetches Valve's SDR configuration from
-  `api.steampowered.com`, validates it, and caches the last good copy.
-- It generates one nftables table, `inet cs2blocker`, with per-POP sets and
-  counters. The complete ruleset is checked with `nft -c` and then applied in a
-  single transaction. A failed check leaves the previous rules untouched.
-- The unprivileged GUI and CLI read status and counter files. Only a short-lived
-  root helper changes rules; the GUI never runs as root.
-- The monitor service publishes live per-POP counters to `/run/cs2blocker`.
-- The map is drawn locally from public-domain Natural Earth data and uses no
-  online tiles or map service.
+| Operation | Active rules | Saved selection | Behavior across reboot |
+| --- | --- | --- | --- |
+| `pause` | removed | preserved | stays paused until `resume` |
+| `resume` | restored from the saved selection | preserved | active rules return |
+| `clear` | removed | forgotten | nothing is restored |
 
-The architecture, trust boundaries, rule generation and failure handling are
-described in [docs/design.md](docs/design.md).
+The systemd boot unit runs `apply --if-not-paused`; the refresh timer also
+respects the paused state, so a paused machine does not silently start blocking
+again after a reboot or relay refresh. Presets survive `clear`; the saved
+selection does not.
 
-## Limitations and safety
+## Latency: ICMP, not SDR
 
-- **The rule is host-wide.** Blocking a POP affects every SDR user on the same
-  machine, not only CS2. Use **Pause** when another game needs SDR.
-- **ICMP is not SDR latency.** The displayed ping is an ICMP round-trip time, not
-  Valve's SDR measurement. Some relays do not answer ICMP and show `n/a`.
-  True SDR RTT would require Valve's authenticated SteamNetworkingSockets/SDR
-  ticket state and is not implemented.
-- **This is not a VPN or a per-process firewall.** It does not hide your IP,
-  change your route, or scope rules to one game. Per-process/cgroup scoping is
-  not implemented.
-- **UDP-only by default.** The helper supports an all-protocol mode for advanced
-  use, but it is broader, can break ICMP-based diagnostics, and is not the GUI
-  default.
-- **Windows and macOS are not supported.** This tool manages Linux netfilter.
-- **No Flatpak or AppImage build.** A sandbox cannot install the root helper
-  and polkit action needed to manage the host firewall; systemd integration is
-  optional.
-- **`drop` can surface as `EPERM`.** A local `sendto()` to a blocked relay can
-  return `EPERM`; this is normal Linux behaviour, not a tool failure.
+The latency shown in the GUI and by `cs2blockctl ping` is an **ICMP** round-trip
+time from this machine. It is an indicative network measurement, not Valve's
+SDR latency. CS2 uses SDR's own measurement and matchmaking process, so a good
+ICMP result does not guarantee that the game selects that POP or sees the same
+latency. Some POPs do not answer ICMP and show `n/a`.
 
-See [troubleshooting](docs/troubleshooting.md) for symptoms and recovery.
+The latency cap is based on these ICMP samples. True SDR RTT measurement is not
+implemented; it would require Valve's authenticated SteamNetworkingSockets/SDR
+state. See [latency and ping](docs/USAGE.md#latency-and-ping) and the
+[firewall guide](docs/FIREWALL.md#host-wide-effects) for the limits.
+
+## Safety model
+
+- The nftables backend owns only `inet cs2blocker`; the iptables fallback owns
+  its `CS2BLOCKER` chain, per-POP ipsets and its own `OUTPUT`/optional `FORWARD`
+  jump. Neither backend edits `/etc/nftables.conf` or deletes unrelated rules.
+- The nftables backend never runs `nft flush ruleset`. Its full ruleset is
+  validated with `nft -c` and then applied as one transaction. A failed check
+  leaves the previous rules in place. The iptables fallback builds a new chain
+  and swaps the jump; it is best-effort atomic.
+- The unprivileged GUI and CLI never modify rules directly. A short-lived root
+  helper validates the request, and privileged operations are serialized.
+- The helper validates Valve's relay document and keeps the last known-good
+  cache. A failed refresh leaves the previous cache and rules usable.
+- ICMP is not blocked by default. A local send to a blocked relay can still
+  surface as `EPERM`; that is normal netfilter behaviour.
+
+See [FIREWALL.md](docs/FIREWALL.md) for the complete rule and removal model and
+[docs/design.md](docs/design.md) for the architecture and trust boundaries.
 
 ## Troubleshooting
 
@@ -178,56 +201,79 @@ Start with the built-in checks:
 ```bash
 cs2blockctl doctor
 sudo cs2blockctl doctor
+cs2blockctl status
 systemctl status cs2blocker.service
 journalctl -u cs2blocker.service -u cs2blocker-refresh.service -b
 ```
 
-Common fixes for polkit/authentication failures, missing nftables, firewall
-reloads, counters, `n/a` pings and non-systemd systems are in
-[docs/troubleshooting.md](docs/troubleshooting.md).
+Common causes and recovery steps are in the
+[troubleshooting guide](docs/TROUBLESHOOTING.md).
+
+## Uninstall
+
+Use the package manager for a package install. For a source install, run
+`sudo ./packaging/uninstall.sh --yes`; add `--keep-config` to keep the saved
+selection and cache. Removal also clears this project's firewall objects.
+
+`pause` is not uninstall: it removes the active rules but keeps the tool and selection.
+See [Installation: removal](docs/INSTALLATION.md#removal) for manual cleanup and iptables fallback notes.
 
 ## Documentation
 
-| I want to… | Read |
+| Goal | Document |
 | --- | --- |
-| Install, upgrade or remove the tool | [Installation](docs/installation.md) |
-| Learn the GUI, CLI and configuration | [Usage and CLI reference](docs/usage.md) |
-| Fix a problem | [Troubleshooting](docs/troubleshooting.md) |
-| Understand the architecture and security model | [Design](docs/design.md) |
-| Build, test or contribute | [Development](docs/development.md) and [Contributing](CONTRIBUTING.md) |
-| Read the original research | [Phase 0 research](docs/phase0-research.md) |
+| Install, upgrade or remove | [Installation](docs/INSTALLATION.md) |
+| Use the GUI, understand selection and pause | [Usage](docs/USAGE.md) |
+| Look up every command and option | [CLI reference](docs/CLI.md) |
+| Understand rules, isolation and host-wide effects | [Firewall guide](docs/FIREWALL.md) |
+| Fix authentication, firewall or GUI problems | [Troubleshooting](docs/TROUBLESHOOTING.md) |
+| Run without systemd | [Non-systemd guide](docs/NON_SYSTEMD.md) |
+| Build, test or release | [Development](docs/DEVELOPMENT.md) |
+| Architecture and threat model | [Design](docs/design.md) |
+| Original feasibility research | [Phase 0 research](docs/phase0-research.md) |
 | Report a vulnerability | [Security policy](SECURITY.md) |
 
-The [documentation index](docs/README.md) lists every document.
+The [documentation index](docs/README.md) lists every document and the intended
+audience.
 
 ## Builds and releases
 
-All release artifacts are built by GitHub Actions; local builds are for testing
-only. Every push to `master` runs the test suite and builds the Arch package,
-`.deb`, `.rpm`, source tarball and checksums. A `v*` tag publishes a GitHub
-release, an SPDX SBOM and keyless cosign signatures for `SHA256SUMS`, and
-updates the AUR package. See [docs/development.md](docs/development.md) for the
-release process and local test commands.
+Every push to `master` runs the tests, GUI smoke test, network-namespace
+integration test, and package builds. A `v*` tag publishes a GitHub release with
+an Arch package, `.deb`, `.rpm`, source tarball, SPDX SBOM, `SHA256SUMS`, and
+keyless cosign signatures for the checksums. The AUR package is updated from the
+same tag. Local package builds are for testing only; published artifacts come
+from CI. See the [development guide](docs/DEVELOPMENT.md) for verification
+commands and the release process.
 
 ## Map data
 
-The continent outlines are derived from Natural Earth 1:110m land data, which
-is in the public domain ([Natural Earth terms](https://www.naturalearthdata.com/about/terms-of-use/)).
+The map outlines are derived from Natural Earth 1:110m land data, which is in the
+public domain ([Natural Earth terms](https://www.naturalearthdata.com/about/terms-of-use/)).
 The geometry is checked into the repository and drawn locally; the application
-never requests map tiles.
+does not request map tiles.
 
 ## Roadmap
 
-- [x] Interactive world map with per-datacenter state.
-- [x] Latency-cap bulk selection with a map preview.
-- [x] Pause/resume, presets, systemd persistence and CI-built release artifacts.
-- [x] AppStream metadata, shell completions, SPDX SBOM and signed checksums.
-- [ ] Latency-based automatic selection as a first-class periodic mode.
-- [ ] Optional latency trend history.
-- [ ] Preset import/export.
-- [ ] Split the GUI window/state/services into smaller modules.
-- [ ] Split the CLI and GUI into separate packages.
-- [ ] True SDR RTT probing.
+Implemented:
+
+- Interactive world map, clusters, inspector, search and continent/country
+  grouping.
+- Region and bulk selection, presets, latency-cap preview and pending/revert
+  workflow.
+- nftables backend with iptables/ipset fallback, UDP-only default, per-POP
+  counters and single-transaction nftables updates.
+- Pause/resume, systemd persistence, weekly refresh, CLI and JSON output.
+- AppStream metadata, shell completions, SPDX SBOM and signed release checksums.
+
+Planned:
+
+- True SDR RTT probing. This is blocked on Valve authentication/SDR transport;
+  replaying the captured `sdping` packet did not produce replies.
+- Split the GUI window/state/services into smaller modules.
+- Split the CLI and GUI into separate packages.
+- Periodic latency-based selection and latency trend history.
+- Preset import/export.
 
 ## License
 
