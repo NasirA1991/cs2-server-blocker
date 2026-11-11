@@ -14,6 +14,7 @@ import struct
 import subprocess
 import time
 from dataclasses import dataclass
+from statistics import median
 from typing import Iterable
 
 _TIME_RE = re.compile(r"time[=<]([0-9.]+)\s*ms")
@@ -46,8 +47,11 @@ def ping(address: str, timeout: float = 1.0) -> PingResult:
     packet = struct.pack("!BBHHH", icmp_type, 0, 0, 0xA55A, 1) + b"cs2blocker"
     try:
         with _icmp_socket(address, timeout) as sock:
+            # Connecting a datagram ICMP socket filters replies to this peer;
+            # an unconnected socket would accept any ICMP response.
+            sock.connect((address, 0))
             started = time.perf_counter()
-            sock.sendto(packet, (address, 0))
+            sock.send(packet)
             data, _ = sock.recvfrom(1500)
             elapsed = (time.perf_counter() - started) * 1000.0
         if not data or data[0] != reply_type:
@@ -79,6 +83,21 @@ def _ping_binary(address: str, timeout: float) -> PingResult:
         return PingResult(address, float(match.group(1)), "ping")
     error = (result.stderr or result.stdout).strip().splitlines()
     return PingResult(address, None, "ping", error[-1] if error else "no reply")
+
+
+def ping_median(address: str, *, samples: int = 3, timeout: float = 1.0) -> PingResult:
+    """Return a median of several ICMP samples.
+
+    One ICMP sample is noisy; three keeps the probe bounded while avoiding a
+    single packet loss turning a usable POP into "n/a".
+    """
+    results = [ping(address, timeout) for _ in range(max(1, samples))]
+    rtts = [result.rtt_ms for result in results if result.rtt_ms is not None]
+    if rtts:
+        method = results[-1].method
+        return PingResult(address, float(median(rtts)), method)
+    last = results[-1]
+    return PingResult(address, None, last.method, last.error or "no reply")
 
 
 def ping_many(addresses: Iterable[str], *, timeout: float = 1.0, workers: int = 32) -> dict[str, PingResult]:

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import replace as dataclass_replace
 
+from .. import __version__
 from .model import FirewallPlan, Mode, Pop, Protocol, SdrSnapshot, Selection
 from .regions import REGION_ORDER
 from .util import format_ranges, merge_ranges, nft_comment
@@ -192,7 +193,7 @@ def render_nft(
     *,
     revision: int = 0,
     replace_strategy: str = "destroy",
-    version: str = "0.1.2",
+    version: str = __version__,
     generated_at: str = DEFAULT_GENERATED_AT,
 ) -> str:
     """Render a complete, self-contained nftables file for our table."""
@@ -285,7 +286,7 @@ def render_nft(
 def render_clear(
     *,
     replace_strategy: str = "destroy",
-    version: str = "0.1.2",
+    version: str = __version__,
     generated_at: str = DEFAULT_GENERATED_AT,
 ) -> str:
     if replace_strategy == "none":

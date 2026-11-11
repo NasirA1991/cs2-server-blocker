@@ -70,8 +70,47 @@ def _file_check(path: Path, *, require_root: bool = False) -> Check:
     return Check(path.name, True, f"{path} mode {oct(stat.S_IMODE(st.st_mode))}")
 
 
+def _installed_code_check() -> Check:
+    """Refuse to trust a helper whose own code is user-writable.
+
+    This mirrors the file-ownership checks used for config/state.  The
+    installer must leave /usr/lib/cs2blocker root-owned; a source checkout or
+    an old ``cp -a`` install can otherwise turn Apply into root code execution.
+    """
+    root = Path("/usr/lib/cs2blocker")
+    if not root.exists():
+        return Check("installed code", True, "not installed system-wide (development tree)", "info")
+    bad: list[str] = []
+    try:
+        for current, dirs, files in os.walk(root):
+            for name in (*dirs, *files):
+                path = Path(current) / name
+                st = os.lstat(path)
+                if stat.S_ISLNK(st.st_mode):
+                    bad.append(f"{path}: symlink in installed code")
+                elif st.st_uid != 0:
+                    bad.append(f"{path}: owned by uid {st.st_uid}")
+                elif st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+                    bad.append(f"{path}: group/world-writable")
+                if len(bad) >= 5:
+                    break
+            if len(bad) >= 5:
+                break
+    except OSError as exc:
+        return Check("installed code", False, f"cannot inspect {root}: {exc}", "error")
+    if bad:
+        return Check(
+            "installed code",
+            False,
+            "root helper code is writable by a non-root user: " + "; ".join(bad),
+            "error",
+        )
+    return Check("installed code", True, f"{root} is root-owned and not group/world-writable")
+
+
 def collect(paths: Paths, *, privileged: bool = False) -> list[Check]:
     checks: list[Check] = []
+    checks.append(_installed_code_check())
     nft = which_fixed("nft")
     if not nft:
         checks.append(Check("nft binary", False, "nft is not installed", "error"))

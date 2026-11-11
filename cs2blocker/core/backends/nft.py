@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from ... import __version__
 from ..model import FirewallPlan
 from ..ruleset import TABLE_NAME, render_clear, render_nft
 from ..util import BackendError, run, utc_now, which_fixed
@@ -21,6 +22,7 @@ class NftBackend(Backend):
         self._runner = runner
         self._nft_path = nft_path or which_fixed("nft")
         self._version: tuple[int, int, int] | None = None
+        self._destroy_supported: bool | None = None
 
     def _run(self, argv: list[str], *, input_text: str | None = None, timeout: float = 60.0) -> CommandResult:
         if self._runner is not None:
@@ -63,7 +65,29 @@ class NftBackend(Backend):
         return self._version
 
     def supports_destroy(self) -> bool:
+        """Whether the userspace **and** kernel accepted ``destroy table``.
+
+        nftables 1.0.7 added the command, but the kernel support landed in
+        6.3.  A successful apply is the only reliable capability probe, so a
+        failed transaction marks destroy unsupported for this process and the
+        caller retries with delete/create.
+        """
+        if self._destroy_supported is not None:
+            return self._destroy_supported
         return self.version_tuple() >= (1, 0, 7)
+
+    @staticmethod
+    def _looks_unsupported(result: CommandResult) -> bool:
+        text = f"{result.stdout}\n{result.stderr}".lower()
+        return (
+            "operation not supported" in text
+            or "not supported" in text
+            or "unknown command" in text
+        )
+
+    def _fallback_after_destroy_failure(self) -> str:
+        self._destroy_supported = False
+        return "delete" if self.table_exists() else "none"
 
     def table_exists(self) -> bool:
         result = self._run([self._nft(), "list", "table", "inet", TABLE_NAME], timeout=15.0)
@@ -85,38 +109,46 @@ class NftBackend(Backend):
         if not plan.has_rules:
             return self.clear()
         strategy = self._replace_strategy()
-        text = render_nft(
-            plan,
-            revision=plan.revision,
-            replace_strategy=strategy,
-            version="0.1.2",
-            generated_at=utc_now(),
-        )
-        check = self._run([self._nft(), "-c", "-f", "-"], input_text=text, timeout=30.0)
-        if not check.ok:
-            raise BackendError(
-                "nft rejected the generated ruleset (check mode):\n"
-                + (check.stderr.strip() or check.stdout.strip() or "unknown error")
+        for attempt in range(2):
+            text = render_nft(
+                plan,
+                revision=plan.revision,
+                replace_strategy=strategy,
+                version=__version__,
+                generated_at=utc_now(),
             )
-        apply_result = self._run([self._nft(), "-f", "-"], input_text=text, timeout=30.0)
-        if not apply_result.ok:
+            check = self._run([self._nft(), "-c", "-f", "-"], input_text=text, timeout=30.0)
+            if not check.ok:
+                if strategy == "destroy" and self._looks_unsupported(check):
+                    strategy = self._fallback_after_destroy_failure()
+                    continue
+                raise BackendError(
+                    "nft rejected the generated ruleset (check mode):\n"
+                    + (check.stderr.strip() or check.stdout.strip() or "unknown error")
+                )
+            apply_result = self._run([self._nft(), "-f", "-"], input_text=text, timeout=30.0)
+            if apply_result.ok:
+                return ApplyResult(
+                    backend=self.name,
+                    active=True,
+                    blocked=plan.blocked_codes,
+                    relay_count=plan.relay_count,
+                    message=(
+                        f"applied {len(plan.blocked)} POP(s), {plan.relay_count} relay endpoint(s), "
+                        f"{'UDP' if plan.protocol.value == 'udp' else 'all protocols'}"
+                    ),
+                )
+            if strategy == "destroy" and self._looks_unsupported(apply_result):
+                strategy = self._fallback_after_destroy_failure()
+                continue
             raise BackendError(
                 "nft failed to apply the ruleset; the previous table is unchanged:\n"
                 + (apply_result.stderr.strip() or apply_result.stdout.strip() or "unknown error")
             )
-        return ApplyResult(
-            backend=self.name,
-            active=True,
-            blocked=plan.blocked_codes,
-            relay_count=plan.relay_count,
-            message=(
-                f"applied {len(plan.blocked)} POP(s), {plan.relay_count} relay endpoint(s), "
-                f"{'UDP' if plan.protocol.value == 'udp' else 'all protocols'}"
-            ),
-        )
+        raise BackendError("nft failed to apply the ruleset after retrying without destroy")
 
     def clear(self) -> ApplyResult:
-        strategy = "destroy" if self.supports_destroy() else self._replace_strategy()
+        strategy = self._replace_strategy()
         if strategy == "none":
             return ApplyResult(
                 backend=self.name,
@@ -125,20 +157,25 @@ class NftBackend(Backend):
                 relay_count=0,
                 message="no nft table to remove",
             )
-        text = render_clear(replace_strategy=strategy, version="0.1.2", generated_at=utc_now())
-        result = self._run([self._nft(), "-f", "-"], input_text=text, timeout=30.0)
-        if not result.ok:
+        for attempt in range(2):
+            text = render_clear(replace_strategy=strategy, version=__version__, generated_at=utc_now())
+            result = self._run([self._nft(), "-f", "-"], input_text=text, timeout=30.0)
+            if result.ok:
+                return ApplyResult(
+                    backend=self.name,
+                    active=False,
+                    blocked=(),
+                    relay_count=0,
+                    message=f"removed table inet {TABLE_NAME}",
+                )
+            if strategy == "destroy" and self._looks_unsupported(result):
+                strategy = self._fallback_after_destroy_failure()
+                continue
             raise BackendError(
                 "nft failed to remove the table:\n"
                 + (result.stderr.strip() or result.stdout.strip() or "unknown error")
             )
-        return ApplyResult(
-            backend=self.name,
-            active=False,
-            blocked=(),
-            relay_count=0,
-            message=f"removed table inet {TABLE_NAME}",
-        )
+        raise BackendError("nft failed to remove the table after retrying without destroy")
 
     def _table_json(self) -> dict[str, Any] | None:
         result = self._run(

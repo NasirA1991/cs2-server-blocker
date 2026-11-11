@@ -1,6 +1,6 @@
 # Design — CS2 Server Blocker for Linux
 
-**Status:** implemented in v0.1.2; this document is kept as the design reference.
+**Status:** implemented in v0.1.3; this document is kept as the design reference.
 **Scope:** a firewall rule manager only. It does not read, modify or inject into the
 game, its files, its memory or Steam. Native and Flatpak Steam are equivalent because
 blocking happens in the host network stack.

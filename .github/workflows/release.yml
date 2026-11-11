@@ -20,17 +20,29 @@ jobs:
             https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz
           sudo tar -xzf /tmp/nfpm.tar.gz -C /usr/local/bin nfpm
           nfpm --version
+      - name: Resolve and verify version
+        run: |
+          VERSION=$(python3 -c 'import cs2blocker; print(cs2blocker.__version__)')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          test "$TAG_VERSION" = "$VERSION" || {
+            echo "tag $TAG_VERSION does not match __version__ $VERSION" >&2
+            exit 1
+          }
+          grep -qx "pkgver=$VERSION" packaging/PKGBUILD
+          grep -qx "pkgver=$VERSION" packaging/aur/PKGBUILD
+          grep -qx "version: $VERSION" packaging/nfpm.yaml
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Stage files
         run: ./packaging/install.sh --root packaging/staging --no-daemon-reload
       - name: Build packages
         run: |
           mkdir -p packaging/dist
           nfpm package --config packaging/nfpm.yaml --packager deb \
-            --target packaging/dist/cs2blocker_0.1.2-1_amd64.deb
+            --target "packaging/dist/cs2blocker_${VERSION}-1_amd64.deb"
           nfpm package --config packaging/nfpm.yaml --packager rpm \
-            --target packaging/dist/cs2blocker-0.1.2-1.x86_64.rpm
-          git archive --format=tar.gz --prefix=cs2blocker-0.1.2/ \
-            -o packaging/dist/cs2blocker-0.1.2.tar.gz HEAD
+            --target "packaging/dist/cs2blocker-${VERSION}-1.x86_64.rpm"
+          git archive --format=tar.gz --prefix="cs2blocker-${VERSION}/" \
+            -o "packaging/dist/cs2blocker-${VERSION}.tar.gz" HEAD
           (cd packaging/dist && sha256sum * > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:

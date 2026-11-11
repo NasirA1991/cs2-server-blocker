@@ -1,6 +1,10 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 -I
 import os
 import sys
+
+if sys.version_info < (3, 11):
+    sys.stderr.write("cs2blocker requires Python 3.11 or newer\n")
+    raise SystemExit(1)
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 from cs2blocker.helper import main

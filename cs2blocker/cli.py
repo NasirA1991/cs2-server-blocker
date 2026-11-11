@@ -21,6 +21,7 @@ from .core.model import Mode, Region, SdrSnapshot
 from .core.ping import ping_many, pop_ping_target, rtt_text
 from .core.presets import load_default_presets
 from .core.regions import REGION_ORDER, group_pops
+from .core.selection import allow_codes, block_codes
 from .core.sdr import load_bundled, load_snapshot_file
 from .core.state import Paths, read_optional_json
 from .core.util import (
@@ -328,8 +329,8 @@ def block_command(paths: Paths, args: argparse.Namespace) -> int:
     unknown = sorted(codes - snapshot.pop_codes())
     if unknown:
         return _fail(f"unknown POP code(s): {', '.join(unknown)}")
-    selected = config.selection.pops | codes
-    return _apply_selection(Mode.BLOCK, selected, args.sudo)
+    updated = block_codes(config.selection, codes)
+    return _apply_selection(updated.mode, updated.pops, args.sudo)
 
 
 def unblock_command(paths: Paths, args: argparse.Namespace) -> int:
@@ -342,8 +343,8 @@ def unblock_command(paths: Paths, args: argparse.Namespace) -> int:
     unknown = sorted(codes - snapshot.pop_codes())
     if unknown:
         return _fail(f"unknown POP code(s): {', '.join(unknown)}")
-    selected = config.selection.pops - codes
-    return _apply_selection(config.selection.mode, selected, args.sudo)
+    updated = allow_codes(config.selection, codes)
+    return _apply_selection(updated.mode, updated.pops, args.sudo)
 
 
 def only_command(paths: Paths, args: argparse.Namespace) -> int:
@@ -404,10 +405,10 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="show rules/cache/persistence status")
     status.add_argument("--json", action="store_true")
 
-    block = sub.add_parser("block", help="add POPs and switch to block mode")
+    block = sub.add_parser("block", help="make POPs blocked (mode-aware)")
     block.add_argument("pops", nargs="+")
 
-    unblock = sub.add_parser("unblock", help="remove POPs from the selection")
+    unblock = sub.add_parser("unblock", help="make POPs allowed (mode-aware)")
     unblock.add_argument("pops", nargs="+")
 
     only = sub.add_parser("only", help="allow only the listed POPs")

@@ -10,13 +10,17 @@ permissions:
 
 jobs:
   test:
-    name: Tests
+    name: Tests (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
       - name: Install test dependencies
         run: |
           sudo apt-get update
@@ -25,6 +29,39 @@ jobs:
         run: python3 -m compileall -q cs2blocker tests
       - name: Unit and integration tests
         run: python3 -m unittest discover -s tests -v
+
+  gui-smoke:
+    name: GUI smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install GTK4, libadwaita and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-gi python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1 xvfb
+      - name: Construct the window
+        env:
+          GSK_RENDERER: cairo
+          GTK_A11Y: none
+        run: xvfb-run -a ./cs2blocker-gui --smoke-test
+
+  netns:
+    name: nftables netns integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install nftables
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nftables iproute2
+      - name: Apply and clear inside a network namespace
+        run: sudo ./scripts/netns-integration.sh
 
   packages:
     name: Debian, RPM and tarball
@@ -37,17 +74,42 @@ jobs:
             https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz
           sudo tar -xzf /tmp/nfpm.tar.gz -C /usr/local/bin nfpm
           nfpm --version
+      - name: Resolve and verify version
+        run: |
+          VERSION=$(python3 -c 'import cs2blocker; print(cs2blocker.__version__)')
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            test "$TAG_VERSION" = "$VERSION" || {
+              echo "tag $TAG_VERSION does not match __version__ $VERSION" >&2
+              exit 1
+            }
+          fi
+          grep -qx "pkgver=$VERSION" packaging/PKGBUILD
+          grep -qx "pkgver=$VERSION" packaging/aur/PKGBUILD
+          grep -qx "version: $VERSION" packaging/nfpm.yaml
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Verify installer ownership
+        run: |
+          sudo ./packaging/install.sh --root /tmp/cs2blocker-stage --no-daemon-reload
+          if find /tmp/cs2blocker-stage/usr/lib/cs2blocker -not -user root -print -quit | grep -q .; then
+            echo "install.sh left non-root-owned helper code" >&2
+            exit 1
+          fi
+          if find /tmp/cs2blocker-stage/usr/lib/cs2blocker -perm /022 -print -quit | grep -q .; then
+            echo "install.sh left group/world-writable helper code" >&2
+            exit 1
+          fi
       - name: Stage files
         run: ./packaging/install.sh --root packaging/staging --no-daemon-reload
       - name: Build packages
         run: |
           mkdir -p packaging/dist
           nfpm package --config packaging/nfpm.yaml --packager deb \
-            --target packaging/dist/cs2blocker_0.1.2-1_amd64.deb
+            --target "packaging/dist/cs2blocker_${VERSION}-1_amd64.deb"
           nfpm package --config packaging/nfpm.yaml --packager rpm \
-            --target packaging/dist/cs2blocker-0.1.2-1.x86_64.rpm
-          git archive --format=tar.gz --prefix=cs2blocker-0.1.2/ \
-            -o packaging/dist/cs2blocker-0.1.2.tar.gz HEAD
+            --target "packaging/dist/cs2blocker-${VERSION}-1.x86_64.rpm"
+          git archive --format=tar.gz --prefix="cs2blocker-${VERSION}/" \
+            -o "packaging/dist/cs2blocker-${VERSION}.tar.gz" HEAD
           (cd packaging/dist && sha256sum * > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:

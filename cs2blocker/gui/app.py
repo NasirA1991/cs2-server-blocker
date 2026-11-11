@@ -8,6 +8,7 @@ import shlex
 import subprocess
 import sys
 import threading
+import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -22,10 +23,17 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
+if (Adw.MAJOR_VERSION, Adw.MINOR_VERSION) < (1, 4):
+    sys.stderr.write(
+        "cs2blocker requires libadwaita 1.4 or newer "
+        f"(found {Adw.MAJOR_VERSION}.{Adw.MINOR_VERSION})\n"
+    )
+    raise SystemExit(1)
+
 from .. import __version__
 from ..core.config import default_config, load_config
 from ..core.model import Mode, Region, SdrSnapshot, Selection
-from ..core.ping import PingResult, ping, pop_ping_target
+from ..core.ping import PingResult, ping_median, pop_ping_target
 from ..core.presets import resolve_preset
 from ..core.regions import REGION_ORDER
 from ..core.ruleset import build_plan
@@ -136,7 +144,14 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._last_counters: dict[str, int] = {}
         self._ping_generation = 0
         self._ping_outstanding = 0
+        self._ping_flush_scheduled = False
         self._executor: ThreadPoolExecutor | None = None
+        self._unit_cache: tuple[float, bool | None] | None = None
+        self._search_source = 0
+        self._close_dialog_open = False
+        self._closing = False
+        self._undo_state: tuple[Mode, set[str]] | None = None
+        self._apply_undo_snapshot: tuple[Mode, set[str]] | None = None
         self._persistence_loading = False
         self._seen_refresh: str | None = None
         self._region_chips: dict[Region, tuple[Gtk.Button, Gtk.Label, Gtk.Label]] = {}
@@ -161,6 +176,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._loading = False
         GLib.idle_add(self._start_ping)
         GLib.timeout_add_seconds(2, self._poll_status)
+        GLib.timeout_add_seconds(60, self._periodic_ping)
         if smoke_test:
             GLib.timeout_add(1600, self._smoke_done)
         self.connect("close-request", self._on_close)
@@ -714,6 +730,11 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.menu_ping_button.set_halign(Gtk.Align.START)
         self.menu_ping_button.connect("clicked", lambda *_: self._start_ping())
         box.append(self.menu_ping_button)
+        self.menu_undo_button = Gtk.Button(label="Undo last apply")
+        self.menu_undo_button.set_halign(Gtk.Align.START)
+        self.menu_undo_button.set_tooltip_text("Restore and apply the rules from before the last apply")
+        self.menu_undo_button.connect("clicked", lambda *_: self._undo_apply())
+        box.append(self.menu_undo_button)
         note = Gtk.Label(
             label="Only inet cs2blocker is modified. ICMP is never blocked.",
             xalign=0.0,
@@ -886,23 +907,33 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         cap = self.ping_cap
         if cap is None:
             return
-        eligible = {
-            entry.code
+        known = {
+            entry.code: self.pings[entry.code]
             for entry in self.entries
             if self.pings.get(entry.code) is not None
-            and self.pings[entry.code] <= cap
         }
-        if not eligible:
-            self._toast("No ping data under the selected threshold yet")
+        if not known:
+            self._toast("No ping data yet; wait for the probe to finish")
             return
+        # POPs whose ICMP probe failed are not "slow": keep their current
+        # state instead of silently blocking every one of them.
+        preserve_unknown = {
+            entry.code
+            for entry in self.entries
+            if entry.code not in known and not self._is_blocked(entry.code)
+        }
+        eligible = {code for code, rtt in known.items() if rtt <= cap}
         self._set_codes_allowed([entry.code for entry in self.entries], False)
-        self._set_codes_allowed(eligible, True)
+        self._set_codes_allowed(eligible | preserve_unknown, True)
         self.focus_code = next(
             (entry.code for entry in self.entries if entry.code in eligible),
-            None,
+            next(iter(preserve_unknown), None),
         )
         self._pending_changed()
-        self._toast(f"Allow under {int(cap)} ms added as pending")
+        self._toast(
+            f"Allow under {int(cap)} ms added as pending"
+            + (f" ({len(preserve_unknown)} unknown ping kept as-is)" if preserve_unknown else "")
+        )
 
     def _open_except_menu(
         self,
@@ -1320,7 +1351,14 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
     def _search_changed(self, entry: Gtk.SearchEntry) -> None:
         self.search_query = entry.get_text().strip()
+        if self._search_source:
+            GLib.source_remove(self._search_source)
+        self._search_source = GLib.timeout_add(150, self._apply_search)
+
+    def _apply_search(self) -> bool:
+        self._search_source = 0
         self._rebuild_sidebar()
+        return False
 
     def _continent_toggled(self, check: Gtk.CheckButton, region: Region) -> None:
         if self._updating_sidebar:
@@ -1469,8 +1507,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.unblock_button,
             self.menu_refresh_button,
             self.menu_ping_button,
+            self.menu_undo_button,
         ):
             button.set_sensitive(installed and not self._busy)
+        self.menu_undo_button.set_sensitive(
+            installed and not self._busy and self._undo_state is not None
+        )
         self.detail_toggle.set_sensitive(
             installed and not self._busy and self.focus_code in self.entry_by_code
         )
@@ -1668,6 +1710,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._do_apply(pops)
 
     def _do_apply(self, pops: list[str]) -> None:
+        self._apply_undo_snapshot = (self.applied_mode, set(self.applied_selection))
         self._run_privileged(
             ["apply", "--mode", self.mode.value, "--pops", ",".join(pops)],
             self._after_apply,
@@ -1676,18 +1719,45 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
     def _after_apply(self, result: tuple[int, str, str, str]) -> None:
         code, stdout, stderr, command = result
         if code == 0:
+            if self._apply_undo_snapshot is not None:
+                self._undo_state = self._apply_undo_snapshot
+                self._apply_undo_snapshot = None
             self.applied_mode = self.mode
             self.applied_selection = set(self.selected)
             self.map.set_pending(self._pending_codes())
             self._update_stats()
             self._update_buttons()
             self._update_status_view()
+            warnings = [
+                line.removeprefix("warning: ").strip()
+                for line in stderr.splitlines()
+                if line.startswith("warning: ")
+            ]
             self._toast("Rules applied")
+            for warning in warnings[:3]:
+                self._toast(warning)
         else:
+            self._apply_undo_snapshot = None
             self._show_error(
                 "Apply failed",
                 (stderr or stdout).strip() + f"\n\nCommand:\n{command}",
             )
+
+    def _undo_apply(self) -> None:
+        if self._busy or self._undo_state is None:
+            return
+        mode, pops = self._undo_state
+        self.mode = mode
+        self.selected = set(pops)
+        self.focus_code = next((code for code in self.selected if code in self.entry_by_code), None)
+        self._update_block_new_view()
+        self.map.set_selection(self.selected, self.mode)
+        self.map.set_pending(self._pending_codes())
+        self._update_stats()
+        self._update_sidebar_selection()
+        self._update_detail()
+        self._update_buttons()
+        self._do_apply(sorted(self.selected))
 
     def _revert_clicked(self) -> None:
         self.mode = self.applied_mode
@@ -1717,6 +1787,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.selected = set()
             self.applied_mode = Mode.BLOCK
             self.applied_selection = set()
+            self._undo_state = None
             self.focus_code = None
             self._update_block_new_view()
             self.map.set_data(
@@ -1807,6 +1878,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 "Persistence change failed",
                 (stderr or stdout).strip() + f"\n\nCommand:\n{command}",
             )
+        self._invalid_unit_cache()
         self._update_persistence_view()
 
     # ------------------------------------------------------------------- ping
@@ -1829,13 +1901,20 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             if target is None:
                 self.pings[entry.code] = None
                 continue
-            future = self._executor.submit(ping, target, 1.0)
+            future = self._executor.submit(ping_median, target, samples=3, timeout=1.0)
             future.add_done_callback(
                 lambda fut, code=entry.code, gen=generation: GLib.idle_add(
                     self._ping_done, gen, code, fut
                 )
             )
         return False
+
+    def _periodic_ping(self) -> bool:
+        if self.smoke_test:
+            return False
+        if self._ping_outstanding == 0 and not self._busy:
+            self._start_ping()
+        return True
 
     def _ping_done(self, generation: int, code: str, future) -> bool:
         if generation != self._ping_generation:
@@ -1847,11 +1926,20 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.pings[code] = None
         self.map.set_pings(self.pings)
         self._ping_outstanding = max(0, self._ping_outstanding - 1)
-        self._update_sidebar_selection()
-        if self._ping_outstanding == 0 and self.sort_by_ping:
-            self._rebuild_sidebar()
         if code == self.focus_code:
             self._update_detail()
+        if self._ping_outstanding == 0:
+            self._flush_pings()
+        elif not self._ping_flush_scheduled:
+            self._ping_flush_scheduled = True
+            GLib.timeout_add(120, self._flush_pings)
+        return False
+
+    def _flush_pings(self) -> bool:
+        self._ping_flush_scheduled = False
+        self._update_sidebar_selection()
+        if self.sort_by_ping and self._ping_outstanding == 0:
+            self._rebuild_sidebar()
         return False
 
     # ---------------------------------------------------------- status/privil
@@ -1869,8 +1957,16 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             return {}
         return document if isinstance(document, dict) else {}
 
-    def _unit_enabled(self) -> bool | None:
+    def _invalid_unit_cache(self) -> None:
+        self._unit_cache = None
+
+    def _unit_enabled(self, *, force: bool = False) -> bool | None:
+        if not force and self._unit_cache is not None:
+            cached_at, cached = self._unit_cache
+            if time.monotonic() - cached_at < 60.0:
+                return cached
         if not which_fixed("systemctl"):
+            self._unit_cache = (time.monotonic(), None)
             return None
         try:
             result = subprocess.run(
@@ -1881,12 +1977,16 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
                 check=False,
             )
         except OSError:
+            self._unit_cache = (time.monotonic(), None)
             return None
         if result.returncode == 0:
-            return True
-        if result.returncode == 1:
-            return False
-        return None
+            enabled: bool | None = True
+        elif result.returncode == 1:
+            enabled = False
+        else:
+            enabled = None
+        self._unit_cache = (time.monotonic(), enabled)
+        return enabled
 
     def _update_status_view(self) -> None:
         self._live = self._read_status()
@@ -1900,10 +2000,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             for code, value in (live.get("counters") or {}).items()
             if isinstance(value, dict)
         }
+        counters_changed = counters != self.counters
         self.counters = counters
-        self.map.set_counters(counters)
-        self._update_sidebar_selection()
-        if self.focus_code:
+        if counters_changed:
+            self.map.set_counters(counters)
+            self._update_sidebar_selection()
+        if self.focus_code and counters_changed:
             self._update_detail()
         cache = state.get("cache") or {}
         enabled = self._unit_enabled()
@@ -2068,7 +2170,13 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         dialog.connect("response", lambda d, _r: d.destroy())
         dialog.present()
 
-    def _confirm(self, heading: str, body: str, on_ok: Callable[[], None]) -> None:
+    def _confirm(
+        self,
+        heading: str,
+        body: str,
+        on_ok: Callable[[], None],
+        on_cancel: Callable[[], None] | None = None,
+    ) -> None:
         dialog = Gtk.MessageDialog(
             transient_for=self,
             modal=True,
@@ -2082,6 +2190,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             d.destroy()
             if response_id == Gtk.ResponseType.OK:
                 on_ok()
+            elif on_cancel is not None:
+                on_cancel()
 
         dialog.connect("response", response)
         dialog.present()
@@ -2107,10 +2217,37 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         dialog.present()
 
     def _on_close(self, *_args) -> bool:
+        if self.smoke_test or self._closing:
+            self._shutdown()
+            return False
+        if self._dirty() and not self._close_dialog_open:
+            self._close_dialog_open = True
+            pending = len(self._pending_codes())
+            self._confirm(
+                "Discard unsaved changes?",
+                f"You have {pending or 'unapplied'} changes. Closing without applying "
+                "will leave the current firewall state unchanged.",
+                self._close_after_confirm,
+                self._cancel_close,
+            )
+            return True
+        if self._close_dialog_open:
+            return True
+        self._shutdown()
+        return False
+
+    def _close_after_confirm(self) -> None:
+        self._close_dialog_open = False
+        self._closing = True
+        self.close()
+
+    def _cancel_close(self) -> None:
+        self._close_dialog_open = False
+
+    def _shutdown(self) -> None:
         if self._executor is not None:
             self._executor.shutdown(wait=False, cancel_futures=True)
             self._executor = None
-        return False
 
     def _smoke_done(self) -> bool:
         print("GUI smoke test: window constructed and shown")

@@ -99,6 +99,12 @@ class Paths:
                 # which only needs /run; an existing directory is enough.
                 if not directory.is_dir():
                     raise
+            if os.geteuid() == 0:
+                st = directory.stat()
+                if st.st_uid != 0:
+                    raise ConfigError(f"refusing state directory not owned by root: {directory}")
+                if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+                    raise ConfigError(f"refusing group/world-writable state directory: {directory}")
 
     @staticmethod
     def bundled_snapshot(appid: int = 730) -> Path:

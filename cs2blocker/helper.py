@@ -58,6 +58,7 @@ from .core.util import (
 )
 
 STALE_AFTER_SECONDS = 8 * 86400
+LOCK_TIMEOUT = 30.0
 UNIT_SERVICE = "cs2blocker.service"
 UNIT_REFRESH_TIMER = "cs2blocker-refresh.timer"
 UNIT_MONITOR = "cs2blocker-monitor.service"
@@ -69,6 +70,42 @@ class HelperError(Cs2BlockerError):
         self.code = code
 
 
+INSTALLED_CODE_ROOT = Path("/usr/lib/cs2blocker")
+
+
+def _verify_installed_code() -> None:
+    """Refuse to execute a system helper whose code a user could rewrite.
+
+    The generic installer used to preserve a checkout's owner; that made
+    ``helper.py`` writable by the invoking user even though root imports it.
+    Packages are normally root-owned, but this check also protects tarball and
+    hand-copied installs.
+    """
+    # Do not resolve symlinks before deciding whether this is installed code:
+    # a symlinked helper.py must still be inspected at its installed path so a
+    # user-writable target cannot bypass the checks by resolving outside /usr.
+    code_dir = Path(__file__).absolute().parent
+    if code_dir != INSTALLED_CODE_ROOT and INSTALLED_CODE_ROOT not in code_dir.parents:
+        return
+    paths = sorted(code_dir.rglob("*.py"))
+    if not paths:
+        raise HelperError(f"refusing to run: no installed helper code under {code_dir}")
+    for path in paths:
+        try:
+            st = path.stat()
+        except OSError as exc:
+            raise HelperError(f"cannot inspect installed helper code {path}: {exc}") from exc
+        if st.st_uid != 0:
+            raise HelperError(
+                f"refusing to run: installed helper code is not root-owned: {path} "
+                "(reinstall with the current packaging/install.sh)"
+            )
+        if st.st_mode & 0o022:
+            raise HelperError(
+                f"refusing to run: installed helper code is group/world-writable: {path}"
+            )
+
+
 def _require_root() -> None:
     if os.geteuid() != 0:
         raise HelperError(
@@ -76,6 +113,7 @@ def _require_root() -> None:
             "or run: sudo /usr/lib/cs2blocker/cs2blocker-helper ...",
             code=1,
         )
+    _verify_installed_code()
 
 
 def _read_state(paths: Paths, *, require_root: bool = True) -> dict[str, Any]:
@@ -255,7 +293,7 @@ def _restore_config(paths: Paths, old_document: dict[str, Any] | None, existed: 
 def apply_command(paths: Paths, args: argparse.Namespace, *, backend: Any = None) -> int:
     _require_root()
     paths.ensure_dirs()
-    with lock(paths):
+    with lock(paths, timeout=LOCK_TIMEOUT):
         had_config = paths.config_file.exists()
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
@@ -320,7 +358,7 @@ def _apply_saved_config(
 def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
     _require_root()
     paths.ensure_dirs()
-    with lock(paths):
+    with lock(paths, timeout=LOCK_TIMEOUT):
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
             config = default_config()
@@ -387,7 +425,7 @@ def refresh_command(paths: Paths, args: argparse.Namespace) -> int:
 def clear_command(paths: Paths, args: argparse.Namespace | None = None) -> int:
     _require_root()
     paths.ensure_dirs()
-    with lock(paths):
+    with lock(paths, timeout=LOCK_TIMEOUT):
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
             config = default_config()
@@ -534,7 +572,7 @@ def persistence_command(paths: Paths, args: argparse.Namespace) -> int:
 def preset_save_command(paths: Paths, args: argparse.Namespace) -> int:
     _require_root()
     paths.ensure_dirs()
-    with lock(paths):
+    with lock(paths, timeout=LOCK_TIMEOUT):
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
             config = default_config()
@@ -555,7 +593,7 @@ def preset_save_command(paths: Paths, args: argparse.Namespace) -> int:
 def preset_delete_command(paths: Paths, args: argparse.Namespace) -> int:
     _require_root()
     paths.ensure_dirs()
-    with lock(paths):
+    with lock(paths, timeout=LOCK_TIMEOUT):
         config = load_config(paths, require_root=True, missing_ok=True)
         if config is None:
             raise HelperError("no config; no presets to delete", code=2)

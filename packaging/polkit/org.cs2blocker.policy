@@ -15,7 +15,9 @@
       <!-- Keep the authorization for a few minutes so Apply and the
            persistence toggle do not prompt on every click. -->
       <allow_active>auth_admin_keep</allow_active>
-      <allow_inactive>auth_admin_keep</allow_inactive>
+      <!-- Never allow a remote/inactive session to authenticate for a
+           desktop gaming tool. -->
+      <allow_inactive>no</allow_inactive>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/cs2blocker/cs2blocker-helper</annotate>
   </action>

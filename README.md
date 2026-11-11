@@ -8,12 +8,12 @@
 
 Take control of your CS2 matchmaking datacenters on Linux. CS2 Server Blocker
 lets you choose which Steam Datagram Relay (SDR) datacenters the game can
-reach, visualize them on an interactive world map, monitor latency, and apply
-the result directly through nftables.
+reach, visualize them on an interactive world map, snapshot ICMP latency, and
+apply the result directly through nftables.
 
 - Interactive global datacenter map.
-- Per-datacenter allowed/blocked state and latency monitoring.
-- Latency-cap bulk selection with a map preview.
+- Per-datacenter allowed/blocked state and a periodic ICMP latency snapshot.
+- ICMP latency-cap bulk selection with a map preview.
 - Presets and persistent firewall rules across reboots.
 - Native nftables integration with an unprivileged GUI and a small helper.
 - GTK4 GUI and a full CLI.
@@ -31,26 +31,26 @@ the result directly through nftables.
 
 ```bash
 yay -S cs2blocker
-# or: sudo pacman -U cs2blocker-0.1.2-1-any.pkg.tar.zst
+# or: sudo pacman -U cs2blocker-0.1.3-1-any.pkg.tar.zst
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./cs2blocker_0.1.2-1_amd64.deb
+sudo apt install ./cs2blocker_0.1.3-1_amd64.deb
 ```
 
 **Fedora / RHEL-compatible**
 
 ```bash
-sudo dnf install ./cs2blocker-0.1.2-1.x86_64.rpm
+sudo dnf install ./cs2blocker-0.1.3-1.x86_64.rpm
 ```
 
 **From the release tarball**
 
 ```bash
-tar xzf cs2blocker-0.1.2.tar.gz
-cd cs2blocker-0.1.2
+tar xzf cs2blocker-0.1.3.tar.gz
+cd cs2blocker-0.1.3
 sudo ./packaging/install.sh
 ```
 
@@ -358,6 +358,18 @@ SDR matchmaking and relay measurement are UDP. Dropping the SDR UDP port range
 to a POP's relay IPs is enough to make that POP unusable, while leaving ICMP,
 Steam downloads, voice and other Valve services alone. It also keeps the GUI
 map ping/detail display meaningful: ICMP still replies while a POP is blocked.
+ICMP RTT is only a rough proxy for the SDR UDP path; it is not SDR's own
+latency measurement and some relays do not answer ICMP at all (shown as
+`n/a`). The GUI refreshes the snapshot every 60 seconds using the median of
+three probes.
+
+### Host-wide SDR side effects
+
+The rule is installed in the host network namespace, not in CS2. Any other
+program on the same machine that uses SDR (for example Dota 2, TF2, Deadlock,
+or a Steam feature that rides SDR) is affected too. Per-process/cgroup scoping
+is not implemented yet. Use `cs2blockctl clear` when you need SDR for another
+game.
 
 A netfilter `drop` in the `output` hook makes the local `sendto()` return
 `EPERM`. That is normal Linux behavior, and the game treats the relay as
@@ -387,11 +399,14 @@ To disable persistence without removing the current rules:
 sudo systemctl disable --now cs2blocker.service cs2blocker-refresh.timer
 ```
 
-To remove the rules now:
+To remove the rules now and clear the saved selection:
 
 ```bash
 sudo cs2blockctl clear
 ```
+
+There is currently no pause/resume command; `clear` is the explicit full
+unblock and it also clears the saved datacenter selection.
 
 ---
 

@@ -64,8 +64,8 @@ class IptablesBackend(Backend):
             raise BackendError("ipset is not installed")
         return [self._ipset, *args]
 
-    def _require_ok(self, argv: list[str], what: str) -> None:
-        result = self._run(argv, timeout=30.0)
+    def _require_ok(self, argv: list[str], what: str, *, input_text: str | None = None) -> None:
+        result = self._run(argv, input_text=input_text, timeout=30.0)
         if not result.ok:
             raise BackendError(
                 f"{what} failed: {result.stderr.strip() or result.stdout.strip() or 'unknown error'}"
@@ -85,32 +85,50 @@ class IptablesBackend(Backend):
                 return
             self._run([ipt, "-w", "5", "-D", parent, "-j", chain], timeout=10.0)
 
-    def _port_match_args(self, plan: FirewallPlan) -> list[str]:
+    def _port_match_chunks(self, plan: FirewallPlan) -> list[list[str]]:
+        """Split SDR ranges into multiport-compatible match chunks.
+
+        ``multiport --dports`` accepts at most 15 ports; a range counts as two.
+        A rule may contain only one multiport match, so a larger, disjoint
+        interval set becomes several rules with the same set/comment.
+        """
         if plan.protocol is not Protocol.UDP or not plan.port_ranges:
-            return []
+            return [[]]
+        chunks: list[list[str]] = []
+        current: list[str] = []
+        cost = 0
+        for start, end in plan.port_ranges:
+            weight = 1 if start == end else 2
+            if current and cost + weight > 15:
+                chunks.append(current)
+                current = []
+                cost = 0
+            current.append(f"{start}:{end}" if start != end else str(start))
+            cost += weight
+        if current:
+            chunks.append(current)
         return [
-            "-p",
-            "udp",
-            "-m",
-            "multiport",
-            "--dports",
-            ",".join(f"{start}:{end}" if start != end else str(start) for start, end in plan.port_ranges),
+            ["-p", "udp", "-m", "multiport", "--dports", ",".join(chunk)]
+            for chunk in chunks
         ]
 
-    def _rule_args(self, plan: FirewallPlan, code: str, set_name: str) -> list[str]:
+    def _rule_args(self, plan: FirewallPlan, code: str, set_name: str) -> list[list[str]]:
         return [
-            *self._port_match_args(plan),
-            "-m",
-            "set",
-            "--match-set",
-            set_name,
-            "dst",
-            "-m",
-            "comment",
-            "--comment",
-            f"cs2blocker:{code}",
-            "-j",
-            "DROP",
+            [
+                *port_match,
+                "-m",
+                "set",
+                "--match-set",
+                set_name,
+                "dst",
+                "-m",
+                "comment",
+                "--comment",
+                f"cs2blocker:{code}",
+                "-j",
+                "DROP",
+            ]
+            for port_match in self._port_match_chunks(plan)
         ]
 
     def _swap_set(self, temp: str, final: str) -> None:
@@ -153,15 +171,17 @@ class IptablesBackend(Backend):
                 self._require_ok([ipt, "-w", "5", "-N", NEW_CHAIN], f"create chain {NEW_CHAIN}")
                 for pop in plan.blocked:
                     if family == "inet" and pop.ipv4_relays:
-                        self._require_ok(
-                            [ipt, "-w", "5", "-A", NEW_CHAIN, *self._rule_args(plan, pop.code, SET_V4_PREFIX + pop.code)],
-                            f"add rule for {pop.code}",
-                        )
+                        for rule in self._rule_args(plan, pop.code, SET_V4_PREFIX + pop.code):
+                            self._require_ok(
+                                [ipt, "-w", "5", "-A", NEW_CHAIN, *rule],
+                                f"add rule for {pop.code}",
+                            )
                     if family == "inet6" and pop.ipv6_relays:
-                        self._require_ok(
-                            [ipt, "-w", "5", "-A", NEW_CHAIN, *self._rule_args(plan, pop.code, SET_V6_PREFIX + pop.code)],
-                            f"add IPv6 rule for {pop.code}",
-                        )
+                        for rule in self._rule_args(plan, pop.code, SET_V6_PREFIX + pop.code):
+                            self._require_ok(
+                                [ipt, "-w", "5", "-A", NEW_CHAIN, *rule],
+                                f"add IPv6 rule for {pop.code}",
+                            )
 
             # 3. Swap the jump(s), then delete the old chain and rename.
             self._swap_parent_chain(self._iptables, "OUTPUT")
@@ -202,8 +222,12 @@ class IptablesBackend(Backend):
             f"ipset create {name}",
         )
         self._require_ok(self._set("flush", name), f"ipset flush {name}")
-        for address in addresses:
-            self._require_ok(self._set("add", name, address, "-exist"), f"ipset add {name}")
+        if not addresses:
+            return
+        # One restore transaction instead of one subprocess per relay (up to
+        # thousands on a large selection).
+        payload = "".join(f"add {name} {address} -exist\n" for address in addresses)
+        self._require_ok(self._set("restore", "-exist"), f"ipset restore {name}", input_text=payload)
 
     def _delete_chain(self, ipt: str, chain: str) -> None:
         if not self._chain_exists(ipt, chain):

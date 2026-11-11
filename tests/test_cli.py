@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 
 from cs2blocker.cli import _requested_region, build_parser
-from cs2blocker.core.model import Region
+from cs2blocker.core.model import Mode, Region, Selection
+from cs2blocker.core.selection import allow_codes, block_codes
 
 
 class CliParsingTests(unittest.TestCase):
@@ -21,6 +22,36 @@ class CliParsingTests(unittest.TestCase):
         self.assertEqual(args.command, "block")
         args = parser.parse_args(["--sudo", "clear"])
         self.assertTrue(args.sudo)
+
+
+class SelectionSemanticsTests(unittest.TestCase):
+    def test_block_in_block_mode_adds_to_block_list(self):
+        selection = Selection(mode=Mode.BLOCK, pops=frozenset({"sto"}))
+        self.assertEqual(
+            block_codes(selection, frozenset({"ams"})),
+            Selection(mode=Mode.BLOCK, pops=frozenset({"sto", "ams"})),
+        )
+
+    def test_unblock_in_block_mode_removes_from_block_list(self):
+        selection = Selection(mode=Mode.BLOCK, pops=frozenset({"sto", "ams"}))
+        self.assertEqual(
+            allow_codes(selection, frozenset({"ams"})),
+            Selection(mode=Mode.BLOCK, pops=frozenset({"sto"})),
+        )
+
+    def test_block_in_allow_only_mode_removes_from_allow_list(self):
+        selection = Selection(mode=Mode.ONLY, pops=frozenset({"sto", "ams"}))
+        self.assertEqual(
+            block_codes(selection, frozenset({"ams"})),
+            Selection(mode=Mode.ONLY, pops=frozenset({"sto"})),
+        )
+
+    def test_unblock_in_allow_only_mode_adds_to_allow_list(self):
+        selection = Selection(mode=Mode.ONLY, pops=frozenset({"sto"}))
+        self.assertEqual(
+            allow_codes(selection, frozenset({"ams"})),
+            Selection(mode=Mode.ONLY, pops=frozenset({"sto", "ams"})),
+        )
 
 
 class CliSubprocessTests(unittest.TestCase):

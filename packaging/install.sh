@@ -32,10 +32,21 @@ install -d "$DEST/lib/cs2blocker" "$DEST/bin" "$DEST/lib/systemd/system" \
   "$ROOT/usr/share/icons/hicolor/scalable/apps" "$ROOT/usr/share/man/man1"
 
 # Package code and bundled data (inside the package, so Paths can find it).
-cp -a "$SRC/cs2blocker" "$DEST/lib/cs2blocker/"
+# Never preserve the ownership of a developer checkout: the helper imports
+# this code as root, so a user-owned file here is a local privilege escalation.
+# Symlinks in a checkout could otherwise point at a user-writable payload that
+# root would import later; shipped packages contain no symlinks.
+if find "$SRC/cs2blocker" -type l -print -quit | grep -q .; then
+  echo "refusing to install: source package contains a symlink" >&2
+  exit 1
+fi
+cp -a --no-preserve=ownership "$SRC/cs2blocker" "$DEST/lib/cs2blocker/"
 find "$DEST/lib/cs2blocker" -type d -name __pycache__ -prune -exec rm -rf {} +
 find "$DEST/lib/cs2blocker" -type f -name '*.pyc' -delete
 chmod -R u+rwX,go+rX,go-w "$DEST/lib/cs2blocker"
+if [[ ${EUID} -eq 0 ]]; then
+  chown -R 0:0 "$DEST/lib/cs2blocker"
+fi
 
 install -Dm755 "$SRC/packaging/launchers/cs2blocker-helper" "$DEST/lib/cs2blocker/cs2blocker-helper"
 install -Dm755 "$SRC/packaging/launchers/cs2blockctl" "$DEST/bin/cs2blockctl"

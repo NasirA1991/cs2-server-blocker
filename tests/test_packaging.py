@@ -59,9 +59,34 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('"appid": 730', result.stdout)
 
+    def test_installed_code_is_not_user_writable(self):
+        code_root = self.root / "usr/lib/cs2blocker"
+        for path in code_root.rglob("*"):
+            st = os.lstat(path)
+            self.assertFalse(st.st_mode & 0o022, f"group/world-writable: {path}")
+            if os.geteuid() == 0:
+                self.assertEqual(st.st_uid, 0, f"not root-owned: {path}")
+        self.assertIn(
+            "--no-preserve=ownership",
+            (ROOT / "packaging/install.sh").read_text(),
+        )
+
+    def test_preremove_clears_rules(self):
+        script = ROOT / "packaging/scripts/preremove.sh"
+        self.assertTrue(script.is_file())
+        text = script.read_text()
+        self.assertIn("cs2blocker-helper", text)
+        self.assertIn("clear", text)
+        self.assertIn("nft delete table inet cs2blocker", text)
+        aur = (ROOT / "packaging/aur/cs2blocker.install").read_text()
+        self.assertIn("pre_remove()", aur)
+        self.assertIn("nft delete table inet cs2blocker", aur)
+
     def test_policy_xml(self):
         policy = ET.parse(self.root / "usr/share/polkit-1/actions/org.cs2blocker.policy").getroot()
         self.assertEqual(policy.find("action").get("id"), "org.cs2blocker.helper")
+        defaults = policy.find("action/defaults")
+        self.assertEqual(defaults.findtext("allow_inactive"), "no")
 
     @unittest.skipUnless(shutil.which("systemd-analyze"), "systemd-analyze absent")
     def test_units_verify(self):
@@ -84,6 +109,13 @@ class PackagingTests(unittest.TestCase):
         if result.returncode != 0 and "sysinit.target not found" in detail:
             self.skipTest("systemd-analyze lacks distro unit files in this environment")
         self.assertEqual(result.returncode, 0, detail)
+
+    def test_version_is_single_sourced(self):
+        from cs2blocker import __version__
+
+        self.assertIn(f"pkgver={__version__}", (ROOT / "packaging/PKGBUILD").read_text())
+        self.assertIn(f"pkgver={__version__}", (ROOT / "packaging/aur/PKGBUILD").read_text())
+        self.assertIn(f"version: {__version__}", (ROOT / "packaging/nfpm.yaml").read_text())
 
     @unittest.skipUnless(shutil.which("desktop-file-validate"), "desktop-file-validate absent")
     def test_desktop_file(self):
