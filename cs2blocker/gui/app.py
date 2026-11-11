@@ -239,7 +239,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             self.dark = bool(Adw.StyleManager.get_default().get_dark())
             if self._css_provider is not None:
                 self._css_provider.load_from_data(CSS if self.dark else CSS + LIGHT_CSS)
-            self.map.set_dark(self.dark)
+            if hasattr(self, "map"):
+                self.map.set_dark(self.dark)
         except Exception:
             pass
 

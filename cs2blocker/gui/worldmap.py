@@ -600,14 +600,14 @@ class WorldMap(Gtk.DrawingArea):
 
             if is_cluster:
                 radius = 9.0 + min(6.0, math.sqrt(len(entries)) * 2.0)
-                cr.set_source_rgba(0.025, 0.07, 0.10, 0.96)
+                cr.set_source_rgba(*self.palette.callout_bg)
                 cr.arc(cx, cy, radius, 0, 2 * math.pi)
                 cr.fill()
                 cr.set_source_rgb(*color)
                 cr.set_line_width(1.5)
                 cr.arc(cx, cy, radius, 0, 2 * math.pi)
                 cr.stroke()
-                cr.set_source_rgb(0.86, 0.92, 0.96)
+                cr.set_source_rgb(*self.palette.text)
                 cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
                 cr.set_font_size(9.5 + min(2.0, len(entries) * 0.12))
                 text = str(len(entries))
@@ -640,7 +640,7 @@ class WorldMap(Gtk.DrawingArea):
 
             if blocked:
                 # Blocked is a hollow ring plus a slash, not a red filled dot.
-                cr.set_source_rgba(0.025, 0.07, 0.10, 0.96)
+                cr.set_source_rgba(*self.palette.callout_bg)
                 cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
                 cr.fill()
                 cr.set_source_rgb(*self.palette.blocked)
@@ -655,7 +655,7 @@ class WorldMap(Gtk.DrawingArea):
                 cr.set_source_rgb(*self.palette.allowed)
                 cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
                 cr.fill()
-                cr.set_source_rgba(0.03, 0.10, 0.09, 0.85)
+                cr.set_source_rgba(*self.palette.callout_bg[:3], 0.85)
                 cr.set_line_width(0.9)
                 cr.arc(cx, cy, base_radius - 0.5, 0, 2 * math.pi)
                 cr.stroke()
@@ -673,7 +673,7 @@ class WorldMap(Gtk.DrawingArea):
                 cr.stroke()
 
             if focused:
-                cr.set_source_rgba(0.92, 0.97, 1.0, 0.95)
+                cr.set_source_rgba(*self.palette.text, 0.95)
                 cr.set_line_width(1.2)
                 cr.arc(cx, cy, base_radius + 2.8 if ping is None else base_radius + 5.2, 0, 2 * math.pi)
                 cr.stroke()
@@ -723,12 +723,12 @@ class WorldMap(Gtk.DrawingArea):
         if top < self._map_rect[1] + 3:
             top = y + radius + 6
         self._rounded_rect(cr, left, top, width, height, 5)
-        cr.set_source_rgba(0.015, 0.045, 0.07, 0.95)
+        cr.set_source_rgba(*self.palette.callout_bg)
         cr.fill()
-        cr.set_source_rgba(0.42, 0.58, 0.70, 0.55)
+        cr.set_source_rgba(*self.palette.callout_border)
         cr.set_line_width(0.7)
         cr.stroke()
-        cr.set_source_rgba(0.82, 0.90, 0.95, 0.95)
+        cr.set_source_rgba(*self.palette.text, 0.95)
         cr.move_to(left + 6, top + 12)
         cr.show_text(text)
         cr.restore()
