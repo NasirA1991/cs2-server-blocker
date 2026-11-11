@@ -32,7 +32,7 @@ unrelated rules; the nftables backend touches only its own table.
 
 | Datacenter inspector | Region selection and pending changes |
 | --- | --- |
-| ![Inspector for Kista, Sweden showing a blocked state, ICMP latency and drop count](docs/screenshots/inspector.png) | ![Europe selected with pending changes and the Apply/Revert bar](docs/screenshots/region.png) |
+| ![Inspector for Kista, Sweden showing a blocked state, ICMP latency and drop count](docs/screenshots/inspector-cropped.png) | ![Europe selected with pending changes and the Apply/Revert bar](docs/screenshots/region-cropped.png) |
 
 ## What it does
 

@@ -83,7 +83,7 @@ The inspector shows the focused POP's city and country, Allowed/Blocked state,
 ICMP latency, drops since the last apply, relay count and UDP port range.
 **Details** reveals the SDR region and port summary.
 
-![Datacenter inspector for Kista, Sweden: blocked, 25 ms ICMP ping, drop count and technical details](screenshots/inspector.png)
+![Datacenter inspector for Kista, Sweden: blocked, 25 ms ICMP ping, drop count and technical details](screenshots/inspector-cropped.png)
 
 The status pill reports whether rules are active, the backend, the relay-list
 revision and cache age. The **Settings** menu contains manual refresh, boot
@@ -114,7 +114,7 @@ it is not a temporary pause.
 
 ## Region and pending edits
 
-![Europe selected with 2 pending changes, region chips and the Apply/Revert bar](screenshots/region.png)
+![Europe selected with 2 pending changes, region chips and the Apply/Revert bar](screenshots/region-cropped.png)
 
 A region chip toggles all POPs in that region. The screenshot above shows the
 state after a region edit: Europe is fully allowed in the pending selection,
