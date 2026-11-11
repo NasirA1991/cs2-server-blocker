@@ -49,29 +49,19 @@ jobs:
           '
 
   netns:
-    name: nftables netns integration
+    name: nftables and iptables netns integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install firewall tools
+      - name: Run firewall integration in an Arch container
+        # The Ubuntu runner's azure.archive.ubuntu.com mirror intermittently
+        # stalls, and `ipset` is not preinstalled. Use a privileged Arch
+        # container so both backends and their tools are available reliably.
         run: |
-          # Bound the mirror calls: a stuck apt update must not hold the
-          # firewall-integration job open indefinitely.
-          sudo timeout 120 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
-          sudo timeout 180 apt-get install -y --no-install-recommends iptables ipset nftables iproute2 || true
-          command -v nft
-          command -v ip
-      - name: Ensure firewall tools are present
-        run: |
-          command -v nft
-          command -v ip
-          command -v iptables
-          command -v ipset
-      - name: Apply and clear inside a network namespace
-        run: sudo bash ./scripts/netns-integration.sh
+          docker run --rm --privileged -v "$PWD":/src -w /src archlinux:latest bash -lc '
+            pacman -Syu --noconfirm --needed nftables iptables ipset iproute2 python
+            bash ./scripts/netns-integration.sh
+          '
 
   packages:
     name: Debian, RPM and tarball
