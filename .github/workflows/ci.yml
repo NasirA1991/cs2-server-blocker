@@ -60,8 +60,10 @@ jobs:
         run: |
           # Bound the mirror calls: a stuck apt update must not hold the
           # firewall-integration job open indefinitely.
-          sudo timeout 120 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update
-          sudo timeout 180 apt-get install -y --no-install-recommends iptables ipset nftables iproute2
+          sudo timeout 120 apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update || true
+          sudo timeout 180 apt-get install -y --no-install-recommends iptables ipset nftables iproute2 || true
+          command -v nft
+          command -v ip
       - name: Ensure firewall tools are present
         run: |
           command -v nft
