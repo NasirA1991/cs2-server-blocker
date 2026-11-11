@@ -13,6 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from . import __version__
+from .i18n import _, setup as setup_i18n
 from .core.config import default_config, load_config
 from .core.diagnostics import as_json as diagnostics_json
 from .core.diagnostics import collect as collect_diagnostics
@@ -478,6 +479,7 @@ HANDLERS = {
 
 
 def main(argv: list[str] | None = None) -> int:
+    setup_i18n()
     parser = build_parser()
     args = parser.parse_args(argv)
     paths = Paths.default()

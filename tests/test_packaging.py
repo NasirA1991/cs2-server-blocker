@@ -43,6 +43,10 @@ class PackagingTests(unittest.TestCase):
             "usr/share/polkit-1/actions/org.cs2blocker.policy",
             "usr/share/applications/org.cs2blocker.Gui.desktop",
             "usr/share/icons/hicolor/scalable/apps/cs2blocker.svg",
+            "usr/share/metainfo/org.cs2blocker.Gui.metainfo.xml",
+            "usr/share/bash-completion/completions/cs2blockctl",
+            "usr/share/zsh/site-functions/_cs2blockctl",
+            "usr/share/fish/vendor_completions.d/cs2blockctl.fish",
             "usr/share/licenses/cs2blocker/LICENSE",
         ]
         for relative in expected:
@@ -117,6 +121,16 @@ class PackagingTests(unittest.TestCase):
         self.assertIn(f"pkgver={__version__}", (ROOT / "packaging/aur/PKGBUILD").read_text())
         self.assertIn(f"version: {__version__}", (ROOT / "packaging/nfpm.yaml").read_text())
 
+    @unittest.skipUnless(shutil.which("appstreamcli"), "appstreamcli absent")
+    def test_metainfo_validates(self):
+        result = subprocess.run(
+            ["appstreamcli", "validate", "--no-net", str(self.root / "usr/share/metainfo/org.cs2blocker.Gui.metainfo.xml")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
     @unittest.skipUnless(shutil.which("desktop-file-validate"), "desktop-file-validate absent")
     def test_desktop_file(self):
         result = subprocess.run(
@@ -145,6 +159,8 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.root / "usr/bin/cs2blockctl").exists())
         self.assertFalse((self.root / "usr/lib/cs2blocker").exists())
+        self.assertFalse((self.root / "usr/share/metainfo/org.cs2blocker.Gui.metainfo.xml").exists())
+        self.assertFalse((self.root / "usr/share/bash-completion/completions/cs2blockctl").exists())
 
 
 if __name__ == "__main__":

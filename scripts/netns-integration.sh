@@ -68,4 +68,39 @@ if nft list table inet cs2blocker >/dev/null 2>&1; then
   exit 1
 fi
 nft list table inet unrelated_test >/dev/null
-printf 'netns integration: OK\n'
+
+# Exercise the iptables/ipset fallback as well.  The helper selects the
+# backend from config; use the same temporary root so host state is untouched.
+if ! command -v ipset >/dev/null 2>&1; then
+  printf 'netns integration: OK (nftables; iptables skipped: ipset missing)\n'
+  exit 0
+fi
+
+python3 - <<'CONFIG'
+from cs2blocker.core.config import default_config, save_config
+from cs2blocker.core.model import BackendName
+from cs2blocker.core.state import Paths
+
+paths = Paths.default()
+paths.ensure_dirs()
+config = default_config()
+config.backend = BackendName.IPTABLES
+save_config(paths, config)
+CONFIG
+
+python3 -m cs2blocker.helper apply --pops ams >/dev/null
+iptables -w 5 -S CS2BLOCKER >/dev/null
+python3 -m cs2blocker.helper status --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["state"]["backend"] == "iptables"; assert d["active"]'
+python3 -m cs2blocker.helper pause >/dev/null
+if iptables -w 5 -S CS2BLOCKER >/dev/null 2>&1; then
+  echo "iptables chain still exists after pause" >&2
+  exit 1
+fi
+python3 -m cs2blocker.helper resume >/dev/null
+iptables -w 5 -S CS2BLOCKER >/dev/null
+python3 -m cs2blocker.helper clear >/dev/null
+if iptables -w 5 -S CS2BLOCKER >/dev/null 2>&1; then
+  echo "iptables chain still exists after clear" >&2
+  exit 1
+fi
+printf 'netns integration: OK (nftables + iptables)\n'

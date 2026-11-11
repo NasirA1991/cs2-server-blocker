@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata for the desktop application.  Keep the component ID in
+  sync with the GTK application ID and the desktop file name; Wayland uses
+  that ID to associate the window with its launcher and icon.
+-->
+<component type="desktop-application">
+  <id>org.cs2blocker.Gui</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>CS2 Server Blocker</name>
+  <developer id="org.cs2blocker">
+    <name>Nasir A.</name>
+  </developer>
+  <summary>Block CS2 datacenters from an interactive world map</summary>
+
+  <description>
+    <p>
+      CS2 Server Blocker gives Linux players a native way to choose which
+      Counter-Strike 2 Steam Datagram Relay regions may answer matchmaking.
+      It blocks only UDP traffic to the selected SDR relays; ICMP and normal
+      browsing traffic stay reachable.
+    </p>
+    <p>
+      Pick datacenters on the world map or in the country list, apply the
+      selection, and inspect ICMP latency and live per-datacenter drop
+      counters. Selections can be paused without losing them, saved as
+      presets, and reapplied at boot.
+    </p>
+    <ul>
+      <li>Interactive, zoomable map of Valve's SDR datacenters</li>
+      <li>Block list, allow-only list, and region-wide actions</li>
+      <li>Visibility into relay addresses, ports, latency, and drops</li>
+      <li>nftables with an iptables/ipset fallback</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">org.cs2blocker.Gui.desktop</launchable>
+  <provides>
+    <binary>cs2blocker-gui</binary>
+  </provides>
+
+  <categories>
+    <category>Network</category>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>Counter-Strike</keyword>
+    <keyword>CS2</keyword>
+    <keyword>firewall</keyword>
+    <keyword>ping</keyword>
+    <keyword>Steam Datagram Relay</keyword>
+    <keyword>gaming</keyword>
+  </keywords>
+
+  <url type="homepage">https://org.cs2blocker/cs2-server-blocker</url>
+  <url type="bugtracker">https://org.cs2blocker/cs2-server-blocker/issues</url>
+  <url type="vcs-browser">https://org.cs2blocker/cs2-server-blocker</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/NasirA1991/cs2-server-blocker/master/docs/screenshot.png</image>
+      <caption>The datacenter map and country panel</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.2.0" date="2026-11-11">
+      <description>
+        <p>Theme-aware colors, native alert dialogs, AppStream metadata,
+        shell completions, signed release artifacts, and expanded firewall
+        integration tests.</p>
+      </description>
+    </release>
+    <release version="0.1.4" date="2026-11-08">
+      <description>
+        <p>Added pause and resume while preserving the saved selection.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <display_length compare="ge">900</display_length>
+  </requires>
+</component>

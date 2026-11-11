@@ -61,6 +61,10 @@ rm -f -- "$ROOT/usr/share/applications/org.cs2blocker.Gui.desktop"
 rm -f -- "$ROOT/usr/share/applications/cs2blocker.desktop"
 rm -f -- "$ROOT/usr/share/icons/hicolor/scalable/apps/cs2blocker.svg"
 rm -f -- "$ROOT/usr/share/man/man1/cs2blockctl.1"
+rm -f -- "$ROOT/usr/share/metainfo/org.cs2blocker.Gui.metainfo.xml"
+rm -f -- "$ROOT/usr/share/bash-completion/completions/cs2blockctl"
+rm -f -- "$ROOT/usr/share/zsh/site-functions/_cs2blockctl"
+rm -f -- "$ROOT/usr/share/fish/vendor_completions.d/cs2blockctl.fish"
 rm -rf -- "$ROOT/usr/share/licenses/cs2blocker"
 
 if [[ $KEEP_CONFIG -eq 0 ]]; then

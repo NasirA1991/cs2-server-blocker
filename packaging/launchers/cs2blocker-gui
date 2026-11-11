@@ -15,9 +15,9 @@ except Exception as exc:  # pragma: no cover - depends on the host
     sys.stderr.write(f"cs2blocker requires GTK4 and libadwaita: {exc}\n")
     raise SystemExit(1)
 
-if (Adw.MAJOR_VERSION, Adw.MINOR_VERSION) < (1, 4):
+if (Adw.MAJOR_VERSION, Adw.MINOR_VERSION) < (1, 5):
     sys.stderr.write(
-        f"cs2blocker requires libadwaita 1.4 or newer (found {Adw.MAJOR_VERSION}.{Adw.MINOR_VERSION})\n"
+        f"cs2blocker requires libadwaita 1.5 or newer (found {Adw.MAJOR_VERSION}.{Adw.MINOR_VERSION})\n"
     )
     raise SystemExit(1)
 

@@ -1,0 +1,56 @@
+#compdef cs2blockctl
+
+_cs2blockctl() {
+  local -a commands pops
+  pops=(${(f)"$(cs2blockctl list 2>/dev/null | sed -n 's/^  \([a-z0-9]\+\).*/\1/p')"})
+  commands=(
+    'list:list POPs'
+    'status:show rules/cache/persistence status'
+    'block:make POPs blocked (mode-aware)'
+    'unblock:make POPs allowed (mode-aware)'
+    'only:allow only the listed POPs'
+    'preset:apply or manage presets'
+    'refresh:fetch a fresh relay list and re-apply'
+    'apply:re-apply the saved selection'
+    'clear:remove all rules and empty the selection'
+    'pause:remove rules but keep the saved selection'
+    'resume:re-apply the saved selection after pause'
+    'ping:ICMP ping POP relays'
+    'counters:show live drop counters'
+    'doctor:run diagnostic checks'
+    'persistence:enable or disable boot persistence'
+    'version:print version'
+  )
+
+  _arguments -C \
+    '--sudo[use sudo instead of pkexec]' \
+    '--version[print version]' \
+    '1:command:->command' \
+    '*::arg:->args'
+
+  case $state in
+    command)
+      _describe 'command' commands ;;
+    args)
+      case $words[1] in
+        block|unblock|only)
+          _describe 'POP' pops ;;
+        ping)
+          _arguments '--region[filter by region]' '--timeout[timeout in seconds]' '--json[JSON output]' '*:POP:' ;;
+        list)
+          _arguments '--region[filter by region]' '--json[JSON output]' ;;
+        status)
+          _arguments '--json[JSON output]' ;;
+        preset)
+          _arguments '--list[list presets]' '--save[save a preset]' '--delete[delete a preset]' '1:preset name:' ;;
+        counters)
+          _arguments '--json[JSON output]' '--watch[follow counters]' '--interval[seconds]' ;;
+        doctor)
+          _arguments '--json[JSON output]' '--privileged[run root checks]' ;;
+        persistence)
+          _arguments '1:action:(enable disable)' ;;
+      esac ;;
+  esac
+}
+
+_cs2blockctl "$@"

@@ -43,7 +43,8 @@ jobs:
           # azure archive mirror is periodically unreachable, which made the
           # apt-based install flaky.
           docker run --rm -v "$PWD":/src -w /src archlinux:latest bash -lc '
-            pacman -Syu --noconfirm --needed python python-gobject python-cairo gtk4 libadwaita xorg-server-xvfb
+            pacman -Syu --noconfirm --needed appstream python python-gobject python-cairo gtk4 libadwaita xorg-server-xvfb
+            appstreamcli validate --no-net packaging/org.cs2blocker.Gui.metainfo.xml
             GSK_RENDERER=cairo GTK_A11Y=none xvfb-run -a ./cs2blocker-gui --smoke-test
           '
 
@@ -55,10 +56,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Ensure nftables is present
+      - name: Install firewall tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends iptables ipset nftables iproute2
+      - name: Ensure firewall tools are present
         run: |
           command -v nft
           command -v ip
+          command -v iptables
+          command -v ipset
       - name: Apply and clear inside a network namespace
         run: sudo bash ./scripts/netns-integration.sh
 

@@ -1,6 +1,6 @@
 # Design — CS2 Server Blocker for Linux
 
-**Status:** implemented in v0.1.3; pause/resume added in v0.1.4. This document is kept as the design reference.
+**Status:** implemented in v0.1.3; pause/resume added in v0.1.4; theme-aware UI, native dialogs, AppStream, completions and signed releases added in v0.2.0. This document is kept as the design reference.
 **Scope:** a firewall rule manager only. It does not read, modify or inject into the
 game, its files, its memory or Steam. Native and Flatpak Steam are equivalent because
 blocking happens in the host network stack.

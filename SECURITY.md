@@ -34,7 +34,9 @@ firewall is host-wide: other SDR users on the same machine are affected too.
 
 ## Supported versions
 
-Security fixes are applied to the latest release. Version 0.1.4 adds pause/resume,
-installed-code symlink checks, and the boot-time paused guard. Version 0.1.3 was
-the first release with the root-owned-code, package-removal, and mode-aware CLI
-fixes.
+Security fixes are applied to the latest release. Version 0.2.0 adds AppStream
+metadata, shell completions, signed release checksums with an SPDX SBOM,
+theme-aware dialogs, and broader firewall integration tests. Version 0.1.4 added
+pause/resume, installed-code symlink checks, and the boot-time paused guard.
+Version 0.1.3 was the first release with the root-owned-code, package-removal,
+and mode-aware CLI fixes.

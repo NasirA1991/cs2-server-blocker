@@ -23,14 +23,15 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-if (Adw.MAJOR_VERSION, Adw.MINOR_VERSION) < (1, 4):
+if (Adw.MAJOR_VERSION, Adw.MINOR_VERSION) < (1, 5):
     sys.stderr.write(
-        "cs2blocker requires libadwaita 1.4 or newer "
+        "cs2blocker requires libadwaita 1.5 or newer "
         f"(found {Adw.MAJOR_VERSION}.{Adw.MINOR_VERSION})\n"
     )
     raise SystemExit(1)
 
 from .. import __version__
+from ..i18n import _, setup as setup_i18n
 from ..core.config import default_config, load_config
 from ..core.model import Mode, Region, SdrSnapshot, Selection
 from ..core.ping import PingResult, ping_median, pop_ping_target
@@ -46,10 +47,10 @@ from .worldmap import MapEntry, WorldMap
 INSTALLED_HELPER = Path("/usr/lib/cs2blocker/cs2blocker-helper")
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CSS = b"""
-.map-shell { background-color: #08121b; border: 1px solid #22313d; border-radius: 12px; }
-.map-control { min-width: 30px; min-height: 30px; padding: 0; border-radius: 6px; }
-.map-legend { background-color: rgba(5, 13, 19, 0.78); border: 1px solid rgba(91, 122, 141, 0.28); border-radius: 6px; padding: 5px 9px; color: #b7c6d0; font-size: 11px; }
-.detail-card { background-color: #0f1821; border: 1px solid #22313d; border-radius: 10px; padding: 11px 14px; }
+.map-shell { background-color: @window_bg_color; border: 1px solid alpha(@window_fg_color, 0.14); border-radius: 12px; }
+.map-control { min-width: 30px; min-height: 30px; padding: 0; border-radius: 6px; background-color: alpha(@window_bg_color, 0.92); color: @window_fg_color; border: 1px solid alpha(@window_fg_color, 0.18); }
+.map-legend { background-color: alpha(@window_bg_color, 0.92); border: 1px solid alpha(@window_fg_color, 0.16); border-radius: 6px; padding: 5px 9px; color: @window_fg_color; font-size: 11px; }
+.detail-card { background-color: @card_bg_color; border: 1px solid alpha(@card_fg_color, 0.14); border-radius: 10px; padding: 11px 14px; }
 .detail-title { font-size: 19px; font-weight: 600; }
 .detail-subtitle { color: #9aacb8; font-size: 12px; }
 .detail-meta { color: #8497a4; font-size: 11px; }
@@ -71,7 +72,7 @@ CSS = b"""
 .section-title { font-size: 13px; font-weight: 600; }
 .dim { color: #95a7b3; }
 .warning-line { color: #d2a24a; font-size: 11.5px; padding: 0 2px; }
-.sidebar-shell { background-color: #0c141c; border-left: 1px solid #1e2b35; }
+.sidebar-shell { background-color: @window_bg_color; border-left: 1px solid alpha(@window_fg_color, 0.12); }
 .sidebar-heading { font-size: 17px; font-weight: 600; }
 .column-header { color: #7d909d; font-size: 10.5px; font-weight: 600; padding: 4px 8px; border-bottom: 1px solid #1d2a34; }
 .dc-country { padding: 2px 7px; border-radius: 5px; min-height: 34px; }
@@ -83,15 +84,47 @@ CSS = b"""
 .sort-toggle:checked { background-color: rgba(111,168,220,0.14); color: #dce8ef; }
 .dc-country:focus-visible, .dc-child:focus-visible { background-color: rgba(111,168,220,0.10); outline: 1px solid rgba(111,168,220,0.55); outline-offset: -2px; }
 .latency-row { padding: 2px 0; }
-.pending-bar { background-color: #111b24; border: 1px solid #344755; border-radius: 8px; padding: 5px 7px; }
+.pending-bar { background-color: @window_bg_color; border: 1px solid alpha(@window_fg_color, 0.22); border-radius: 8px; padding: 5px 7px; }
 .pending-label { color: #d8e5ed; font-size: 12px; font-weight: 600; }
-.status-pill { background-color: rgba(143,170,186,0.08); border: 1px solid #263744; border-radius: 6px; padding: 2px 9px; color: #9fb2bf; font-size: 11.5px; }
+.status-pill { background-color: alpha(@window_fg_color, 0.06); border: 1px solid alpha(@window_fg_color, 0.16); border-radius: 6px; padding: 2px 9px; color: alpha(@window_fg_color, 0.78); font-size: 11.5px; }
 .status-popover-title { color: #d7e5ed; font-size: 12px; font-weight: 600; }
 .status-popover-value { color: #93a7b4; font-size: 11.5px; }
 .sidebar-search { font-size: 12px; }
 .header-counts { font-size: 11.5px; }
 """
 
+LIGHT_CSS = b"""
+.map-shell { background-color: #eef5f8; border: 1px solid #b8cbd4; }
+.map-legend { background-color: rgba(255, 255, 255, 0.90); border: 1px solid rgba(70, 100, 115, 0.35); color: #35464f; }
+.detail-card { background-color: #ffffff; border: 1px solid #c5d5dd; }
+.detail-subtitle { color: #4d606b; }
+.detail-meta { color: #5e737f; }
+.ping-big { color: #17252d; }
+.ping-caption { color: #5e737f; }
+.drop-label { color: #5e737f; }
+.ping-good { color: #087a4c; }
+.ping-fair { color: #8a5a00; }
+.ping-bad { color: #a91c23; }
+.state-blocked { color: #a91c23; }
+.state-allowed { color: #087a4c; }
+.stat-dirty { color: #8a5a00; }
+.region-chip { background-color: rgba(30, 60, 75, 0.05); border: 1px solid rgba(50, 80, 95, 0.28); }
+.region-chip-active { background-color: rgba(30, 90, 150, 0.12); border-color: rgba(30, 90, 150, 0.45); }
+.footer { color: #4d606b; }
+.dim { color: #5e737f; }
+.warning-line { color: #8a5a00; }
+.sidebar-shell { background-color: #f7fafb; border-left: 1px solid #c5d5dd; }
+.column-header { color: #5e737f; border-bottom: 1px solid #d7e3e8; }
+.dc-country:hover, .dc-child:hover { background-color: rgba(30, 60, 75, 0.07); }
+.code-badge { color: #35464f; background-color: rgba(50, 80, 95, 0.10); }
+.sort-toggle:checked { background-color: rgba(30, 90, 150, 0.14); color: #17252d; }
+.dc-country:focus-visible, .dc-child:focus-visible { background-color: rgba(30, 90, 150, 0.10); outline-color: rgba(30, 90, 150, 0.65); }
+.pending-bar { background-color: #ffffff; border: 1px solid #b8cbd4; }
+.pending-label { color: #17252d; }
+.status-pill { background-color: rgba(50, 80, 95, 0.07); border: 1px solid #c5d5dd; color: #35464f; }
+.status-popover-title { color: #17252d; }
+.status-popover-value { color: #4d606b; }
+"""
 
 
 @dataclass
@@ -173,6 +206,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self._install_css()
         self._load_data()
         self._build_ui()
+        self.map.set_dark(self.dark)
         self._refresh_ui_from_data()
         self._loading = False
         GLib.idle_add(self._start_ping)
@@ -183,20 +217,29 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.connect("close-request", self._on_close)
 
     # ------------------------------------------------------------------ setup
-    @staticmethod
-    def _install_css() -> None:
+    def _install_css(self) -> None:
         try:
+            manager = Adw.StyleManager.get_default()
+            self.dark = bool(manager.get_dark())
             display = Gdk.Display.get_default()
             if display is not None:
                 provider = Gtk.CssProvider()
-                provider.load_from_data(CSS)
+                provider.load_from_data(CSS if self.dark else CSS + LIGHT_CSS)
                 Gtk.StyleContext.add_provider_for_display(
                     display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
                 )
+                self._css_provider = provider
+            manager.connect("notify::dark", self._on_color_scheme_changed)
         except Exception:
-            pass
+            self.dark = True
+            self._css_provider = None
+
+    def _on_color_scheme_changed(self, *_args) -> None:
         try:
-            Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.PREFER_DARK)
+            self.dark = bool(Adw.StyleManager.get_default().get_dark())
+            if self._css_provider is not None:
+                self._css_provider.load_from_data(CSS if self.dark else CSS + LIGHT_CSS)
+            self.map.set_dark(self.dark)
         except Exception:
             pass
 
@@ -281,8 +324,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title="CS2 Server Blocker",
-                subtitle="Linux · nftables",
+                title=_("CS2 Server Blocker"),
+                subtitle=_("Linux · nftables"),
             )
         )
         self.sidebar_toggle = Gtk.ToggleButton()
@@ -327,7 +370,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         content.set_vexpand(True)
 
         topbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        presets_label = Gtk.Label(label="Presets")
+        presets_label = Gtk.Label(label=_("Presets"))
         presets_label.add_css_class("dim")
         presets_label.add_css_class("footer")
         topbar.append(presets_label)
@@ -335,7 +378,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.preset_dropdown.set_valign(Gtk.Align.CENTER)
         self.preset_dropdown.connect("notify::selected", self._preset_changed)
         topbar.append(self.preset_dropdown)
-        self.save_preset_button = Gtk.Button(label="Save preset")
+        self.save_preset_button = Gtk.Button(label=_("Save preset"))
         self.save_preset_button.add_css_class("flat")
         self.save_preset_button.set_tooltip_text("Save the current allowed/blocked state as a preset")
         self.save_preset_button.connect("clicked", lambda *_: self._save_preset())
@@ -347,12 +390,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.header_counts.add_css_class("header-counts")
         self.header_counts.set_tooltip_text("Counts of datacenters, not relays.")
         topbar.append(self.header_counts)
-        self.unblock_button = Gtk.Button(label="Unblock all")
+        self.unblock_button = Gtk.Button(label=_("Unblock all"))
         self.unblock_button.add_css_class("flat")
         self.unblock_button.set_tooltip_text("Remove every block created by this application")
         self.unblock_button.connect("clicked", lambda *_: self._unblock_clicked())
         topbar.append(self.unblock_button)
-        self.pause_button = Gtk.Button(label="Pause")
+        self.pause_button = Gtk.Button(label=_("Pause"))
         self.pause_button.add_css_class("flat")
         self.pause_button.set_tooltip_text("Remove the rules temporarily; keep the saved datacenter selection")
         self.pause_button.connect("clicked", lambda *_: self._pause_clicked())
@@ -420,12 +463,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.pending_bar.set_visible(False)
         self.pending_label = Gtk.Label(label="")
         self.pending_label.add_css_class("pending-label")
-        self.revert_button = Gtk.Button(label="Revert")
+        self.revert_button = Gtk.Button(label=_("Revert"))
         self.revert_button.add_css_class("flat")
         self.revert_button.set_tooltip_text("Discard pending changes")
         self.revert_button.connect("clicked", lambda *_: self._revert_clicked())
         self.spinner = Gtk.Spinner()
-        self.apply_button = Gtk.Button(label="Apply")
+        self.apply_button = Gtk.Button(label=_("Apply"))
         self.apply_button.add_css_class("suggested-action")
         self.apply_button.connect("clicked", lambda *_: self._apply_clicked())
         for widget in (
@@ -457,16 +500,16 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         detail_left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         detail_left.set_hexpand(True)
-        self.detail_title = Gtk.Label(label="Choose a datacenter", xalign=0.0)
+        self.detail_title = Gtk.Label(label=_("Choose a datacenter"), xalign=0.0)
         self.detail_title.add_css_class("detail-title")
         self.detail_title.set_ellipsize(3)
         self.detail_subtitle = Gtk.Label(
-            label="Select a dot on the map or a row in the datacenter panel",
+            label=_("Select a dot on the map or a row in the datacenter panel"),
             xalign=0.0,
         )
         self.detail_subtitle.add_css_class("detail-subtitle")
         self.detail_subtitle.set_ellipsize(3)
-        self.details_expander = Gtk.Expander(label="Details")
+        self.details_expander = Gtk.Expander(label=_("Details"))
         self.details_expander.set_visible(False)
         self.detail_meta = Gtk.Label(label="", xalign=0.0, wrap=True)
         self.detail_meta.add_css_class("detail-meta")
@@ -480,7 +523,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         ping_box.set_valign(Gtk.Align.CENTER)
         self.detail_ping = Gtk.Label(label="—")
         self.detail_ping.add_css_class("ping-big")
-        ping_caption = Gtk.Label(label="ICMP ping")
+        ping_caption = Gtk.Label(label=_("ICMP ping"))
         ping_caption.add_css_class("ping-caption")
         ping_box.append(self.detail_ping)
         ping_box.append(ping_caption)
@@ -490,7 +533,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.drops_box.set_valign(Gtk.Align.CENTER)
         self.detail_drops = Gtk.Label(label="0")
         self.detail_drops.add_css_class("ping-big")
-        drops_caption = Gtk.Label(label="drops")
+        drops_caption = Gtk.Label(label=_("drops"))
         drops_caption.add_css_class("ping-caption")
         self.drops_box.append(self.detail_drops)
         self.drops_box.append(drops_caption)
@@ -499,7 +542,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         action_box.set_valign(Gtk.Align.CENTER)
         self.detail_state = Gtk.Label(label="")
-        self.detail_toggle = Gtk.Button(label="Block datacenter")
+        self.detail_toggle = Gtk.Button(label=_("Block datacenter"))
         self.detail_toggle.connect("clicked", lambda *_: self._toggle_focus())
         self.detail_toggle.set_sensitive(False)
         action_box.append(self.detail_state)
@@ -512,7 +555,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.status_pill = Gtk.MenuButton()
         self.status_pill.add_css_class("status-pill")
         self.status_pill.set_tooltip_text("Backend, relay list and persistence details")
-        self.status_label = Gtk.Label(label="Starting…")
+        self.status_label = Gtk.Label(label=_("Starting…"))
         self.status_pill.set_child(self.status_label)
         self.status_pill.set_popover(self._build_status_popover())
         status_row.append(self.status_pill)
@@ -550,7 +593,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         shell.set_size_request(340, -1)
 
         title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        title = Gtk.Label(label="Datacenters", xalign=0.0)
+        title = Gtk.Label(label=_("Datacenters"), xalign=0.0)
         title.add_css_class("sidebar-heading")
         title.set_hexpand(True)
         self.sidebar_count_label = Gtk.Label(label="")
@@ -570,15 +613,15 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         shell.append(self.search_count_label)
 
         self.sidebar_quick_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        allow_all = Gtk.Button(label="Allow all")
+        allow_all = Gtk.Button(label=_("Allow all"))
         allow_all.add_css_class("flat")
         allow_all.set_tooltip_text("Allow every known datacenter")
         allow_all.connect("clicked", lambda *_: self._allow_all())
-        block_all = Gtk.Button(label="Block all")
+        block_all = Gtk.Button(label=_("Block all"))
         block_all.add_css_class("flat")
         block_all.set_tooltip_text("Block every known datacenter")
         block_all.connect("clicked", lambda *_: self._block_all())
-        self.sort_button = Gtk.ToggleButton(label="Sort: A–Z")
+        self.sort_button = Gtk.ToggleButton(label=_("Sort: A–Z"))
         self.sort_button.add_css_class("flat")
         self.sort_button.add_css_class("sort-toggle")
         self.sort_button.set_tooltip_text("Sort datacenters by ping instead of name")
@@ -590,7 +633,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
         cap_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         cap_row.add_css_class("latency-row")
-        cap_label = Gtk.Label(label="Allow under")
+        cap_label = Gtk.Label(label=_("Allow under"))
         cap_label.add_css_class("footer")
         self.ping_cap_scale = Gtk.Scale.new_with_range(
             Gtk.Orientation.HORIZONTAL, 30, 150, 5
@@ -604,7 +647,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.ping_cap_scale.connect("value-changed", self._ping_cap_changed)
         self.ping_cap_label = Gtk.Label(label=f"{int(self.ping_cap or 80)} ms", width_chars=6)
         self.ping_cap_label.add_css_class("footer")
-        self.ping_cap_apply = Gtk.Button(label="Apply cap")
+        self.ping_cap_apply = Gtk.Button(label=_("Apply cap"))
         self.ping_cap_apply.add_css_class("flat")
         self.ping_cap_apply.set_tooltip_text("Allow datacenters at or below the chosen ping")
         self.ping_cap_apply.connect("clicked", lambda *_: self._apply_ping_cap())
@@ -617,10 +660,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         column_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         column_header.add_css_class("column-header")
         column_header.set_margin_end(38)
-        dc_header = Gtk.Label(label="Datacenter", xalign=0.0, hexpand=True)
-        state_header = Gtk.Label(label="State", xalign=1.0, width_chars=8)
-        ping_header = Gtk.Label(label="Ping", xalign=1.0, width_chars=7)
-        drops_header = Gtk.Label(label="Drops", xalign=1.0, width_chars=5)
+        dc_header = Gtk.Label(label=_("Datacenter"), xalign=0.0, hexpand=True)
+        state_header = Gtk.Label(label=_("State"), xalign=1.0, width_chars=8)
+        ping_header = Gtk.Label(label=_("Ping"), xalign=1.0, width_chars=7)
+        drops_header = Gtk.Label(label=_("Drops"), xalign=1.0, width_chars=5)
         column_header.append(dc_header)
         column_header.append(state_header)
         column_header.append(ping_header)
@@ -630,7 +673,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.sidebar_scroll = Gtk.ScrolledWindow()
         self.sidebar_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.sidebar_scroll.set_vexpand(True)
-        placeholder = Gtk.Label(label="Loading datacenters…")
+        placeholder = Gtk.Label(label=_("Loading datacenters…"))
         placeholder.add_css_class("dim")
         self.sidebar_scroll.set_child(placeholder)
         shell.append(self.sidebar_scroll)
@@ -653,7 +696,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         box.set_margin_bottom(10)
         box.set_margin_start(12)
         box.set_margin_end(12)
-        title = Gtk.Label(label="Runtime status", xalign=0.0)
+        title = Gtk.Label(label=_("Runtime status"), xalign=0.0)
         title.add_css_class("status-popover-title")
         box.append(title)
         self.status_backend = Gtk.Label(xalign=0.0)
@@ -665,7 +708,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         for label in (self.status_backend, self.status_revision, self.status_cache):
             box.append(label)
         note = Gtk.Label(
-            label="Only inet cs2blocker is modified.",
+            label=_("Only inet cs2blocker is modified."),
             xalign=0.0,
             wrap=True,
         )
@@ -682,7 +725,7 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         box.set_margin_start(14)
         box.set_margin_end(14)
         box.set_size_request(280, -1)
-        title = Gtk.Label(label="Settings", xalign=0.0)
+        title = Gtk.Label(label=_("Settings"), xalign=0.0)
         title.add_css_class("section-title")
         box.append(title)
 
@@ -690,12 +733,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         policy_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         policy_text.set_hexpand(True)
         policy_label = Gtk.Label(
-            label="Block newly added datacenters automatically",
+            label=_("Block newly added datacenters automatically"),
             xalign=0.0,
             wrap=True,
         )
         policy_label.set_max_width_chars(28)
-        self.block_new_label = Gtk.Label(label="Checking…", xalign=0.0, wrap=True)
+        self.block_new_label = Gtk.Label(label=_("Checking…"), xalign=0.0, wrap=True)
         self.block_new_label.add_css_class("dim")
         self.block_new_label.add_css_class("footer")
         policy_text.append(policy_label)
@@ -714,8 +757,8 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         persistence_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         persistence_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         persistence_text.set_hexpand(True)
-        label = Gtk.Label(label="Boot persistence", xalign=0.0)
-        self.persistence_label = Gtk.Label(label="Checking…", xalign=0.0)
+        label = Gtk.Label(label=_("Boot persistence"), xalign=0.0)
+        self.persistence_label = Gtk.Label(label=_("Checking…"), xalign=0.0)
         self.persistence_label.add_css_class("dim")
         self.persistence_label.add_css_class("footer")
         persistence_text.append(label)
@@ -728,21 +771,21 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
 
         separator = Gtk.Separator()
         box.append(separator)
-        self.menu_refresh_button = Gtk.Button(label="Refresh relay list")
+        self.menu_refresh_button = Gtk.Button(label=_("Refresh relay list"))
         self.menu_refresh_button.set_halign(Gtk.Align.START)
         self.menu_refresh_button.connect("clicked", lambda *_: self._refresh_clicked())
         box.append(self.menu_refresh_button)
-        self.menu_ping_button = Gtk.Button(label="Ping all datacenters")
+        self.menu_ping_button = Gtk.Button(label=_("Ping all datacenters"))
         self.menu_ping_button.set_halign(Gtk.Align.START)
         self.menu_ping_button.connect("clicked", lambda *_: self._start_ping())
         box.append(self.menu_ping_button)
-        self.menu_undo_button = Gtk.Button(label="Undo last apply")
+        self.menu_undo_button = Gtk.Button(label=_("Undo last apply"))
         self.menu_undo_button.set_halign(Gtk.Align.START)
         self.menu_undo_button.set_tooltip_text("Restore and apply the rules from before the last apply")
         self.menu_undo_button.connect("clicked", lambda *_: self._undo_apply())
         box.append(self.menu_undo_button)
         note = Gtk.Label(
-            label="Only inet cs2blocker is modified. ICMP is never blocked.",
+            label=_("Only inet cs2blocker is modified. ICMP is never blocked."),
             xalign=0.0,
             wrap=True,
         )
@@ -1087,12 +1130,12 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
             )
             continent_count = Gtk.Label(label="")
             continent_count.add_css_class("footer")
-            allow_button = Gtk.Button(label="Allow all")
+            allow_button = Gtk.Button(label=_("Allow all"))
             allow_button.add_css_class("sidebar-bulk")
             allow_button.add_css_class("flat")
             allow_button.set_tooltip_text(f"Allow every {region.value} datacenter")
             allow_button.connect("clicked", lambda _b, r=region: self._set_region_allowed(r, True))
-            block_button = Gtk.Button(label="Block all")
+            block_button = Gtk.Button(label=_("Block all"))
             block_button.add_css_class("sidebar-bulk")
             block_button.add_css_class("flat")
             block_button.set_tooltip_text(f"Block every {region.value} datacenter")
@@ -1584,10 +1627,10 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         box.set_margin_bottom(10)
         box.set_margin_start(10)
         box.set_margin_end(10)
-        title = Gtk.Label(label="Datacenters in this cluster", xalign=0.0)
+        title = Gtk.Label(label=_("Datacenters in this cluster"), xalign=0.0)
         title.add_css_class("section-title")
         box.append(title)
-        hint = Gtk.Label(label="Click one to toggle it and show its ping.", xalign=0.0)
+        hint = Gtk.Label(label=_("Click one to toggle it and show its ping."), xalign=0.0)
         hint.add_css_class("dim")
         hint.add_css_class("footer")
         box.append(hint)
@@ -2221,16 +2264,11 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         self.toast_overlay.add_toast(Adw.Toast.new(message))
 
     def _show_error(self, heading: str, body: str) -> None:
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            modal=True,
-            message_type=Gtk.MessageType.ERROR,
-            buttons=Gtk.ButtonsType.CLOSE,
-            text=heading,
-        )
-        dialog.set_property("secondary-text", body[:8000])
-        dialog.connect("response", lambda d, _r: d.destroy())
-        dialog.present()
+        dialog = Adw.AlertDialog(heading=heading, body=body[:8000])
+        dialog.add_response("close", "Close")
+        dialog.set_default_response("close")
+        dialog.set_close_response("close")
+        dialog.present(self)
 
     def _confirm(
         self,
@@ -2239,44 +2277,43 @@ class Cs2BlockerWindow(Adw.ApplicationWindow):
         on_ok: Callable[[], None],
         on_cancel: Callable[[], None] | None = None,
     ) -> None:
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            modal=True,
-            message_type=Gtk.MessageType.WARNING,
-            buttons=Gtk.ButtonsType.OK_CANCEL,
-            text=heading,
-        )
-        dialog.set_property("secondary-text", body)
+        dialog = Adw.AlertDialog(heading=heading, body=body)
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("ok", "Continue")
+        dialog.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("ok")
+        dialog.set_close_response("cancel")
 
-        def response(d, response_id):
-            d.destroy()
-            if response_id == Gtk.ResponseType.OK:
+        def response(_dialog, response_id):
+            if response_id == "ok":
                 on_ok()
             elif on_cancel is not None:
                 on_cancel()
 
         dialog.connect("response", response)
-        dialog.present()
+        dialog.present(self)
 
     def _ask_text(self, heading: str, label: str, on_ok: Callable[[str], None]) -> None:
-        dialog = Gtk.Dialog(transient_for=self, modal=True, title=heading)
-        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
-        dialog.add_button("Save", Gtk.ResponseType.OK)
+        dialog = Adw.AlertDialog(heading=heading, body=label)
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("save", "Save")
+        dialog.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("save")
+        dialog.set_close_response("cancel")
         entry = Gtk.Entry(placeholder_text=label, activates_default=True)
         entry.set_margin_top(12)
         entry.set_margin_bottom(12)
         entry.set_margin_start(12)
         entry.set_margin_end(12)
-        dialog.get_content_area().append(entry)
+        dialog.set_extra_child(entry)
 
-        def response(d, response_id):
+        def response(_dialog, response_id):
             text = entry.get_text().strip()
-            d.destroy()
-            if response_id == Gtk.ResponseType.OK and text:
+            if response_id == "save" and text:
                 on_ok(text)
 
         dialog.connect("response", response)
-        dialog.present()
+        dialog.present(self)
 
     def _on_close(self, *_args) -> bool:
         if self.smoke_test or self._closing:
@@ -2342,6 +2379,7 @@ class Cs2BlockerApp(Adw.Application):
 
 
 def main(argv: list[str] | None = None) -> int:
+    setup_i18n()
     args = list(sys.argv if argv is None else argv)
     smoke = "--smoke-test" in args
     args = [a for a in args if a != "--smoke-test"]

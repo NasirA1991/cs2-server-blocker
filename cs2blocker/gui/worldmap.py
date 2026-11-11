@@ -27,18 +27,69 @@ LAT_MAX = 84.0
 ZOOM_MIN = 1.0
 ZOOM_MAX = 14.0
 MAP_PAD = 14.0
-OCEAN_TOP = (0.017, 0.055, 0.095)
-OCEAN_BOTTOM = (0.018, 0.105, 0.160)
-LAND_FILL = (0.070, 0.155, 0.205)
-LAND_STROKE = (0.23, 0.46, 0.56, 0.55)
-GRID = (0.55, 0.78, 0.90, 0.055)
-BLOCKED = (0.94, 0.30, 0.32)
-ALLOWED = (0.20, 0.82, 0.58)
-AMBER = (0.98, 0.72, 0.28)
-TEXT = (0.90, 0.95, 1.0)
-DIM = (0.63, 0.74, 0.82)
-PENDING = (0.86, 0.70, 0.38)
-ACCENT = (0.48, 0.72, 0.96)
+@dataclass(frozen=True, slots=True)
+class MapPalette:
+    ocean_top: tuple[float, float, float]
+    ocean_bottom: tuple[float, float, float]
+    land_fill: tuple[float, float, float]
+    land_stroke: tuple[float, float, float, float]
+    grid: tuple[float, float, float, float]
+    border: tuple[float, float, float, float]
+    blocked: tuple[float, float, float]
+    allowed: tuple[float, float, float]
+    amber: tuple[float, float, float]
+    text: tuple[float, float, float]
+    dim: tuple[float, float, float]
+    pending: tuple[float, float, float]
+    accent: tuple[float, float, float]
+    callout_bg: tuple[float, float, float, float]
+    callout_border: tuple[float, float, float, float]
+    ping_good: tuple[float, float, float]
+    ping_fair: tuple[float, float, float]
+    ping_bad: tuple[float, float, float]
+
+
+DARK_PALETTE = MapPalette(
+    ocean_top=(0.017, 0.055, 0.095),
+    ocean_bottom=(0.018, 0.105, 0.160),
+    land_fill=(0.070, 0.155, 0.205),
+    land_stroke=(0.23, 0.46, 0.56, 0.55),
+    grid=(0.55, 0.78, 0.90, 0.055),
+    border=(0.45, 0.70, 0.82, 0.20),
+    blocked=(0.94, 0.30, 0.32),
+    allowed=(0.20, 0.82, 0.58),
+    amber=(0.98, 0.72, 0.28),
+    text=(0.90, 0.95, 1.0),
+    dim=(0.63, 0.74, 0.82),
+    pending=(0.86, 0.70, 0.38),
+    accent=(0.48, 0.72, 0.96),
+    callout_bg=(0.015, 0.045, 0.07, 0.96),
+    callout_border=(0.32, 0.46, 0.56, 0.55),
+    ping_good=(0.30, 0.82, 0.62),
+    ping_fair=(0.92, 0.70, 0.34),
+    ping_bad=(0.88, 0.40, 0.42),
+)
+
+LIGHT_PALETTE = MapPalette(
+    ocean_top=(0.86, 0.93, 0.97),
+    ocean_bottom=(0.72, 0.84, 0.91),
+    land_fill=(0.94, 0.96, 0.94),
+    land_stroke=(0.34, 0.47, 0.52, 0.65),
+    grid=(0.20, 0.35, 0.45, 0.12),
+    border=(0.25, 0.40, 0.50, 0.30),
+    blocked=(0.76, 0.12, 0.18),
+    allowed=(0.04, 0.52, 0.32),
+    amber=(0.72, 0.45, 0.03),
+    text=(0.10, 0.16, 0.21),
+    dim=(0.30, 0.38, 0.45),
+    pending=(0.62, 0.38, 0.02),
+    accent=(0.12, 0.36, 0.72),
+    callout_bg=(1.0, 1.0, 1.0, 0.97),
+    callout_border=(0.30, 0.43, 0.50, 0.55),
+    ping_good=(0.03, 0.48, 0.29),
+    ping_fair=(0.64, 0.40, 0.02),
+    ping_bad=(0.72, 0.10, 0.13),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +122,7 @@ class WorldMap(Gtk.DrawingArea):
         self.set_vexpand(True)
         self.set_size_request(760, 380)
         self.set_focusable(True)
+        self.palette = DARK_PALETTE
         self.entries: tuple[MapEntry, ...] = ()
         self.selected: set[str] = set()
         self.mode = Mode.BLOCK
@@ -127,6 +179,12 @@ class WorldMap(Gtk.DrawingArea):
         self.add_controller(keys)
 
     # ------------------------------------------------------------------ data
+    def set_dark(self, dark: bool) -> None:
+        palette = DARK_PALETTE if dark else LIGHT_PALETTE
+        if palette is not self.palette:
+            self.palette = palette
+            self.queue_draw()
+
     def set_data(
         self,
         entries: tuple[MapEntry, ...],
@@ -410,8 +468,8 @@ class WorldMap(Gtk.DrawingArea):
         self._rounded_rect(cr, x0, y0, map_w, map_h, 16)
         cr.clip()
         gradient = cairo.LinearGradient(0, y0, 0, y0 + map_h)
-        gradient.add_color_stop_rgb(0, *OCEAN_TOP)
-        gradient.add_color_stop_rgb(1, *OCEAN_BOTTOM)
+        gradient.add_color_stop_rgb(0, *self.palette.ocean_top)
+        gradient.add_color_stop_rgb(1, *self.palette.ocean_bottom)
         cr.set_source(gradient)
         cr.paint()
         self._draw_grid(cr)
@@ -433,7 +491,7 @@ class WorldMap(Gtk.DrawingArea):
     def _draw_border(self, cr: cairo.Context, x: float, y: float, w: float, h: float) -> None:
         cr.save()
         self._rounded_rect(cr, x, y, w, h, 16)
-        cr.set_source_rgba(0.45, 0.70, 0.82, 0.20)
+        cr.set_source_rgba(*self.palette.border)
         cr.set_line_width(1.0)
         cr.stroke()
         cr.restore()
@@ -441,7 +499,7 @@ class WorldMap(Gtk.DrawingArea):
     def _draw_grid(self, cr: cairo.Context) -> None:
         cr.save()
         cr.set_line_width(1.0)
-        cr.set_source_rgba(*GRID)
+        cr.set_source_rgba(*self.palette.grid)
         lon_span, lat_span = self._spans()
         lon_start = max(-180, math.floor((self.center_lon - lon_span / 2) / 30) * 30)
         lon_end = min(180, math.ceil((self.center_lon + lon_span / 2) / 30) * 30)
@@ -479,9 +537,9 @@ class WorldMap(Gtk.DrawingArea):
                 else:
                     cr.line_to(x, y)
             cr.close_path()
-        cr.set_source_rgb(*LAND_FILL)
+        cr.set_source_rgb(*self.palette.land_fill)
         cr.fill_preserve()
-        cr.set_source_rgba(*LAND_STROKE)
+        cr.set_source_rgba(*self.palette.land_stroke)
         cr.set_line_width(0.75)
         cr.stroke()
         cr.restore()
@@ -494,20 +552,19 @@ class WorldMap(Gtk.DrawingArea):
     def _state_color(self, entries: tuple[MapEntry, ...]) -> tuple[float, float, float]:
         blocked = sum(1 for entry in entries if self._is_blocked(entry.code))
         if blocked == 0:
-            return ALLOWED
+            return self.palette.allowed
         if blocked == len(entries):
-            return BLOCKED
-        return AMBER
+            return self.palette.blocked
+        return self.palette.amber
 
-    @staticmethod
-    def _ping_color(ping: float | None) -> tuple[float, float, float]:
+    def _ping_color(self, ping: float | None) -> tuple[float, float, float]:
         if ping is None:
-            return DIM
+            return self.palette.dim
         if ping <= 50.0:
-            return (0.30, 0.82, 0.62)
+            return self.palette.ping_good
         if ping <= 100.0:
-            return (0.92, 0.70, 0.34)
-        return (0.88, 0.40, 0.42)
+            return self.palette.ping_fair
+        return self.palette.ping_bad
 
     def _draw_entries(self, cr: cairo.Context) -> None:
         self._targets = []
@@ -558,7 +615,7 @@ class WorldMap(Gtk.DrawingArea):
                 cr.move_to(cx - ext.width / 2 - ext.x_bearing, cy - ext.height / 2 - ext.y_bearing)
                 cr.show_text(text)
                 if pending:
-                    self._draw_dashed_ring(cr, cx, cy, radius + 4.0, PENDING, 1.1)
+                    self._draw_dashed_ring(cr, cx, cy, radius + 4.0, self.palette.pending, 1.1)
                 target = _Target(cx, cy, radius + 2, entries, True)
                 self._targets.append(target)
                 if hovered:
@@ -575,8 +632,8 @@ class WorldMap(Gtk.DrawingArea):
 
             if focused or hovered:
                 glow = cairo.RadialGradient(cx, cy, base_radius, cx, cy, base_radius * 3.2)
-                glow.add_color_stop_rgba(0, *(BLOCKED if blocked else ALLOWED), 0.18)
-                glow.add_color_stop_rgba(1, *(BLOCKED if blocked else ALLOWED), 0.0)
+                glow.add_color_stop_rgba(0, *(self.palette.blocked if blocked else self.palette.allowed), 0.18)
+                glow.add_color_stop_rgba(1, *(self.palette.blocked if blocked else self.palette.allowed), 0.0)
                 cr.set_source(glow)
                 cr.arc(cx, cy, base_radius * 3.2, 0, 2 * math.pi)
                 cr.fill()
@@ -586,7 +643,7 @@ class WorldMap(Gtk.DrawingArea):
                 cr.set_source_rgba(0.025, 0.07, 0.10, 0.96)
                 cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
                 cr.fill()
-                cr.set_source_rgb(*BLOCKED)
+                cr.set_source_rgb(*self.palette.blocked)
                 cr.set_line_width(1.8)
                 cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
                 cr.stroke()
@@ -595,7 +652,7 @@ class WorldMap(Gtk.DrawingArea):
                 cr.line_to(cx + base_radius * 0.62, cy - base_radius * 0.62)
                 cr.stroke()
             else:
-                cr.set_source_rgb(*ALLOWED)
+                cr.set_source_rgb(*self.palette.allowed)
                 cr.arc(cx, cy, base_radius, 0, 2 * math.pi)
                 cr.fill()
                 cr.set_source_rgba(0.03, 0.10, 0.09, 0.85)
@@ -610,7 +667,7 @@ class WorldMap(Gtk.DrawingArea):
                 cr.stroke()
 
             if self.ping_cap is not None and ping is not None and ping <= self.ping_cap:
-                cr.set_source_rgba(*ACCENT, 0.86)
+                cr.set_source_rgba(*self.palette.accent, 0.86)
                 cr.set_line_width(1.2)
                 cr.arc(cx, cy, base_radius + 3.8, 0, 2 * math.pi)
                 cr.stroke()
@@ -622,13 +679,13 @@ class WorldMap(Gtk.DrawingArea):
                 cr.stroke()
 
             if pending:
-                self._draw_dashed_ring(cr, cx, cy, base_radius + 4.2, PENDING, 1.0)
+                self._draw_dashed_ring(cr, cx, cy, base_radius + 4.2, self.palette.pending, 1.0)
 
             pulse_until = self._pulses.get(entry.code)
             if pulse_until is not None and pulse_until > now and blocked:
                 remaining = max(0.0, pulse_until - now)
                 progress = 1.0 - remaining / 1.15
-                cr.set_source_rgba(*BLOCKED, max(0.0, 0.65 * (1.0 - progress)))
+                cr.set_source_rgba(*self.palette.blocked, max(0.0, 0.65 * (1.0 - progress)))
                 cr.set_line_width(1.8)
                 cr.arc(cx, cy, base_radius + 3.0 + progress * 9.0, 0, 2 * math.pi)
                 cr.stroke()
@@ -682,13 +739,13 @@ class WorldMap(Gtk.DrawingArea):
     ) -> None:
         blocked = self._is_blocked(entry.code)
         state = "Blocked" if blocked else "Allowed"
-        state_color = BLOCKED if blocked else ALLOWED
+        state_color = self.palette.blocked if blocked else self.palette.allowed
         ping = self.pings.get(entry.code)
         ping_text = "ping …" if ping is None else f"{ping:.0f} ms"
         pending_text = "  ·  pending" if pending else ""
         lines = [
-            (entry.title, 12.5, True, TEXT),
-            (entry.subtitle, 9.5, False, DIM),
+            (entry.title, 12.5, True, self.palette.text),
+            (entry.subtitle, 9.5, False, self.palette.dim),
             (f"{state}  ·  {ping_text}{pending_text}", 9.5, True, state_color),
         ]
         cr.save()
@@ -706,9 +763,9 @@ class WorldMap(Gtk.DrawingArea):
         x0 = max(self._map_rect[0] + 5, min(self._map_rect[0] + self._map_rect[2] - width - 5, x0))
         y0 = max(self._map_rect[1] + 5, min(self._map_rect[1] + self._map_rect[3] - height - 5, y0))
         self._rounded_rect(cr, x0, y0, width, height, 7)
-        cr.set_source_rgba(0.015, 0.045, 0.07, 0.96)
+        cr.set_source_rgba(*self.palette.callout_bg)
         cr.fill_preserve()
-        cr.set_source_rgba(0.32, 0.46, 0.56, 0.55)
+        cr.set_source_rgba(*self.palette.callout_border)
         cr.set_line_width(0.8)
         cr.stroke()
         ty = y0 + 16
@@ -731,7 +788,7 @@ class WorldMap(Gtk.DrawingArea):
         if self.entries:
             return
         cr.save()
-        cr.set_source_rgba(*DIM)
+        cr.set_source_rgba(*self.palette.dim)
         cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
         cr.set_font_size(14)
         text = "No relay data loaded"

@@ -1,7 +1,7 @@
 name: cs2blocker
 arch: amd64
 platform: linux
-version: 0.1.4
+version: 0.2.0
 release: "1"
 section: utils
 priority: optional
@@ -29,6 +29,14 @@ contents:
     dst: /usr/share/icons
   - src: packaging/staging/usr/share/man
     dst: /usr/share/man
+  - src: packaging/staging/usr/share/metainfo
+    dst: /usr/share/metainfo
+  - src: packaging/staging/usr/share/bash-completion/completions
+    dst: /usr/share/bash-completion/completions
+  - src: packaging/staging/usr/share/zsh/site-functions
+    dst: /usr/share/zsh/site-functions
+  - src: packaging/staging/usr/share/fish/vendor_completions.d
+    dst: /usr/share/fish/vendor_completions.d
   - src: packaging/staging/usr/share/licenses
     dst: /usr/share/licenses
 scripts:
@@ -45,7 +53,7 @@ overrides:
       - python3-gi
       - python3-cairo
       - gir1.2-gtk-4.0
-      - gir1.2-adw-1 (>= 1.4)
+      - gir1.2-adw-1 (>= 1.5)
   rpm:
     depends:
       - python3 >= 3.11
@@ -55,4 +63,4 @@ overrides:
       - python3-gobject
       - python3-cairo
       - gtk4
-      - libadwaita >= 1.4
+      - libadwaita >= 1.5

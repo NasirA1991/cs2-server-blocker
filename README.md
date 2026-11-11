@@ -31,26 +31,26 @@ apply the result directly through nftables.
 
 ```bash
 yay -S cs2blocker
-# or: sudo pacman -U cs2blocker-0.1.4-1-any.pkg.tar.zst
+# or: sudo pacman -U cs2blocker-0.2.0-1-any.pkg.tar.zst
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./cs2blocker_0.1.4-1_amd64.deb
+sudo apt install ./cs2blocker_0.2.0-1_amd64.deb
 ```
 
 **Fedora / RHEL-compatible**
 
 ```bash
-sudo dnf install ./cs2blocker-0.1.4-1.x86_64.rpm
+sudo dnf install ./cs2blocker-0.2.0-1.x86_64.rpm
 ```
 
 **From the release tarball**
 
 ```bash
-tar xzf cs2blocker-0.1.4.tar.gz
-cd cs2blocker-0.1.4
+tar xzf cs2blocker-0.2.0.tar.gz
+cd cs2blocker-0.2.0
 sudo ./packaging/install.sh
 ```
 
@@ -97,7 +97,7 @@ See [Download](#download) for all release artifacts and dependencies.
   polkit agent.
 - Keyboard support for the map and datacenter rows; a status pill exposes
   backend, relay revision and boot state without cluttering the workspace.
-- Requires libadwaita 1.4+ for the responsive `Adw.OverlaySplitView`.
+- Follows the system light/dark preference; the map and surfaces have separate light and dark palettes. Requires libadwaita 1.5+ for `Adw.OverlaySplitView` and `Adw.AlertDialog`.
 - Fail-safe: a failed fetch keeps the last good list; a failed apply leaves the
   previous table untouched because the whole ruleset is one `nft -f`
   transaction after an `nft -c` check.
@@ -105,6 +105,10 @@ See [Download](#download) for all release artifacts and dependencies.
 - Pause removes the rules while keeping the saved selection; resume restores
   exactly the same rules. `clear` remains the full reset that also forgets
   the selection.
+- AppStream metadata, Bash/Zsh/Fish completions, SPDX SBOM and keyless cosign
+  signatures for release checksums.
+- Follows the desktop light/dark preference and uses native `Adw.AlertDialog`
+  prompts instead of deprecated GTK dialogs.
 
 ---
 
@@ -114,7 +118,7 @@ See [Download](#download) for all release artifacts and dependencies.
 - Python 3.11+.
 - systemd for boot persistence and the weekly refresh (the helper/CLI/GUI still
   work without it; see [Non-systemd systems](#non-systemd-systems)).
-- GTK4 + libadwaita 1.4+ + PyGObject for the GUI (the responsive split view uses libadwaita 1.4).
+- GTK4 + libadwaita 1.5+ + PyGObject for the GUI (the responsive split view and native alert dialogs use libadwaita 1.5).
 - polkit (`pkexec`) and an authentication agent for GUI/CLI elevation. On
   minimal window managers without an agent, use the CLI with `sudo`.
 
@@ -202,7 +206,7 @@ normal reloads do not remove this table. If something explicitly runs
 | System | Status |
 | --- | --- |
 | Arch / CachyOS / Manjaro | Native PKGBUILD and the generic installer; tested here. |
-| Debian / Ubuntu / Fedora / openSUSE | Use `packaging/install.sh` and install the dependencies listed above. `.deb`/`.rpm` files are not built yet. |
+| Debian / Ubuntu / Fedora / openSUSE | Use the release `.deb`/`.rpm` or `packaging/install.sh` with the dependencies above. |
 | Artix / Void / Alpine / non-systemd | Helper and CLI work; use an init script/cron. Boot persistence and the weekly timer require systemd; see [Non-systemd systems](#non-systemd-systems). |
 | Windows / macOS | Not supported; this is a Linux netfilter tool. |
 
@@ -221,11 +225,10 @@ sudo cs2blockctl doctor   # also checks the kernel/backend
 
 ### Debian/RPM packages
 
-`.deb` and `.rpm` packages are not built in this pass. The planned path is
-`nfpm` using the same file list as `install.sh` (package, helper, units, polkit
-action, desktop file, icon, man page), with `postinst` running `systemctl
-daemon-reload` but not enabling the service. The Arch PKGBUILD and generic
-installer are complete and tested to a staging root.
+`.deb` and `.rpm` packages are built by GitHub Actions with `nfpm` from the
+same staged file list as `install.sh`; `postinst` runs `systemctl daemon-reload`
+but does not enable the service. The Arch PKGBUILD and generic installer are
+complete and tested to a staging root.
 
 > **Why not Flatpak or AppImage?** A sandboxed app cannot install a root helper,
 > a polkit action or systemd units, and cannot edit the host firewall. Shipping
@@ -371,7 +374,17 @@ map ping/detail display meaningful: ICMP still replies while a POP is blocked.
 ICMP RTT is only a rough proxy for the SDR UDP path; it is not SDR's own
 latency measurement and some relays do not answer ICMP at all (shown as
 `n/a`). The GUI refreshes the snapshot every 60 seconds using the median of
-three probes.
+three probes. True SDR RTT is **not** implemented: Valve's SDR ping sampling
+requires authenticated SteamNetworkingSockets/SDR ticket state, and replaying
+a captured `sdping` packet to a relay does not produce a usable reply. The
+latency shown in the app is therefore explicitly labelled ICMP, not SDR.
+
+Release artifacts include an SPDX JSON SBOM and a keyless cosign signature for
+`SHA256SUMS` (`.sig` and `.pem`). Verify with:
+
+```bash
+cosign verify-blob --certificate SHA256SUMS.pem --signature SHA256SUMS.sig SHA256SUMS
+```
 
 ### Host-wide SDR side effects
 
@@ -627,6 +640,9 @@ firewall. See the packaging notes below for the reason.
 - [ ] Optional latency trend history.
 - [ ] Export/import presets.
 - [ ] GUI-accessible diagnostics and recovery flow.
+- [ ] Split the GUI window/state/services into smaller modules.
+- [ ] Split CLI and GUI into separate packages (currently one package installs both).
+- [ ] True SDR RTT probing; blocked on Valve's authenticated SteamNetworkingSockets/SDR ticket state.
 
 ## License
 
