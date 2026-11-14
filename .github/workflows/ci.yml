@@ -121,9 +121,10 @@ jobs:
             echo "iptables chain CS2BLOCKER still exists" >&2
             exit 1
           fi
-          if sudo systemctl list-unit-files 'cs2blocker*' --no-legend 2>/dev/null | grep -q .; then
+          sudo systemctl list-unit-files 'cs2blocker*' --no-legend > /tmp/cs2blocker-leftover-units 2>/dev/null || true
+          if grep -q . /tmp/cs2blocker-leftover-units; then
             echo "systemd still lists cs2blocker units" >&2
-            sudo systemctl list-unit-files 'cs2blocker*' --no-legend 2>/dev/null || true
+            cat /tmp/cs2blocker-leftover-units >&2
             exit 1
           fi
           sudo find /etc/systemd/system -maxdepth 2 -type l -lname '*cs2blocker*' > /tmp/cs2blocker-leftover-links
