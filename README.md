@@ -102,7 +102,23 @@ All release artifacts are built by GitHub Actions and published on the
 | Arch Linux, CachyOS, Manjaro | `yay -S cs2blocker` (AUR), or `sudo pacman -U cs2blocker-*.pkg.tar.zst` |
 | Debian, Ubuntu, Linux Mint | `sudo apt install ./cs2blocker_*_amd64.deb` |
 | Fedora, RHEL-compatible | `sudo dnf install ./cs2blocker-*x86_64.rpm` |
-| Other distributions | source tarball + `sudo ./packaging/install.sh` |
+| Other distributions | source tarball + `sudo ./packaging/install.sh` (or `sudo ./install.sh`) |
+
+For the tarball/source install, verify the release files before running the
+installer:
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+If `cosign` is installed, verify `SHA256SUMS` with the release workflow identity
+shown in the [installation guide](docs/INSTALLATION.md#verify-release-files-optional).
+The installer checks required dependencies for a system install; `--skip-deps`
+skips that check, and `--force` only overrides the package-conflict guard. Both
+`sudo ./install.sh` and `sudo ./packaging/install.sh` invoke the same script.
+Remove a source install with `sudo ./uninstall.sh --yes` (or
+`sudo ./packaging/uninstall.sh --yes`); add `--keep-config` to retain the saved
+selection and cache.
 
 Packages are currently published for the architectures shown above: Debian
 `amd64`, RPM `x86_64`, and an Arch `any` package. There is **no Flatpak or
@@ -212,8 +228,9 @@ Common causes and recovery steps are in the
 ## Uninstall
 
 Use the package manager for a package install. For a source install, run
-`sudo ./packaging/uninstall.sh --yes`; add `--keep-config` to keep the saved
-selection and cache. Removal also clears this project's firewall objects.
+`sudo ./uninstall.sh --yes` (or `sudo ./packaging/uninstall.sh --yes`); add
+`--keep-config` to keep the saved selection and cache. Removal also clears this
+project's firewall objects.
 
 `pause` is not uninstall: it removes the active rules but keeps the tool and selection.
 See [Installation: removal](docs/INSTALLATION.md#removal) for manual cleanup and iptables fallback notes.

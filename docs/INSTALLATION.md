@@ -101,7 +101,55 @@ sudo ./packaging/install.sh
 
 The installer copies the application, launchers, systemd units, polkit action,
 desktop entry, icon, man page, AppStream metadata and shell completions under
-`/usr`. It does **not** enable or start any service.
+`/usr`. It does **not** enable or start any service. The root-level
+`./install.sh` is a thin alias for `./packaging/install.sh`; both take the same
+arguments.
+
+### Source installer options
+
+| Option | Meaning |
+| --- | --- |
+| `--root DIR` | Install under `DIR/usr` instead of `/`. Intended for staging and packaging; dependency and package-conflict checks are skipped. |
+| `--skip-deps` | Skip the dependency warnings and required-dependency check for a system install. The package-conflict guard still applies. |
+| `--force` | Bypass the distro-package conflict guard. It does not bypass dependency checks and does not remove the package. |
+| `--no-daemon-reload` | Do not run `systemctl daemon-reload` after installing. |
+| `-h`, `--help` | Show the complete option help. |
+
+A system install checks:
+
+- `python3` is at least 3.11;
+- `nft` exists, or both `iptables` and `ipset` exist;
+- the GTK4/libadwaita 1.5+, PyGObject and Cairo GUI stack imports correctly
+  (warning only; the CLI still works);
+- `pkcheck`/`pkexec` exists (warning only; use `sudo cs2blockctl apply` if not);
+- `systemctl` exists (warning only; see the [non-systemd guide](NON_SYSTEMD.md)).
+
+Missing required, GUI or polkit packages are reported together with a
+package-manager command for the detected `ID`/`ID_LIKE` family. Required
+components fail the install; GUI, polkit and systemd are warnings. A missing
+`systemctl` is reported with a pointer to the non-systemd guide instead of a
+package command.
+
+If `cs2blocker` is already installed by pacman, dpkg or rpm, the installer
+refuses to continue. Remove the package first or upgrade through the package
+manager. `--force` is only for deliberately replacing a package-managed install.
+
+The installer builds the complete tree in a temporary staging directory, checks
+permissions, then installs the files individually from the staged manifest with
+their staged modes. It never recopies a directory tree over an existing system
+directory, so `/usr/lib`, `/usr/share` and other parent directories keep their
+current ownership and modes. It writes
+`/usr/lib/cs2blocker/install-manifest.txt` (root-owned, mode 0644). On a
+re-install or upgrade it removes only files that were in the previous manifest
+and are absent from the new one. On a system install it also rejects installed
+files and parent directories that are not root-owned, are group/world-writable,
+or lack world read/execute permission. If a step fails, the error trap prints
+the failed step and the cleanup command:
+
+```bash
+sudo ./packaging/uninstall.sh --yes --keep-config
+```
+
 
 ### Package dependencies for manual installs
 
@@ -256,10 +304,30 @@ For a source installation, run the uninstaller from the checkout or extracted
 tarball:
 
 ```bash
+sudo ./uninstall.sh --yes
+# equivalent:
 sudo ./packaging/uninstall.sh --yes
 ```
 
-Use `--keep-config` to preserve the saved selection, presets and cache.
+Source uninstaller options:
+
+| Option | Meaning |
+| --- | --- |
+| `--root DIR` | Remove from `DIR/usr` instead of `/` (staging/testing). |
+| `--keep-config` | Preserve `/etc/cs2blocker` and `/var/lib/cs2blocker` (selection, presets and cache). |
+| `--yes`, `-y` | Do not ask for confirmation. |
+| `--force` | Bypass the distro-package guard. |
+| `--no-daemon-reload` | Do not run `systemctl daemon-reload`/`reset-failed`. |
+| `-h`, `--help` | Show the complete option help. |
+
+The uninstaller refuses to run for a package-managed install unless `--force`
+is given; use `pacman -Rns`, `apt remove` or `dnf remove` instead. It removes
+the files listed in `install-manifest.txt` when present, or the legacy
+hard-coded list for older source installs, and removes only empty directories
+inside the cs2blocker code/license trees. It still clears the nftables table,
+the iptables `CS2BLOCKER` chain and jumps, and matching `cs2b_*`/`cs2b6_*`
+ipsets before the files are removed.
+
 
 To remove only the firewall rules while keeping the tool and the saved
 selection, pause:
