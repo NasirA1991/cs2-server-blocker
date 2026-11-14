@@ -85,7 +85,8 @@ jobs:
           sudo cp "$manifest" /tmp/cs2blocker-manifest.txt
           mapfile -t units < <(grep -l '^\[Install\]' packaging/systemd/* | xargs -n1 basename)
           sudo systemctl enable "${units[@]}"
-          if ! sudo find /etc/systemd/system -type l -lname '*cs2blocker*' | grep -q .; then
+          sudo find /etc/systemd/system -type l -lname '*cs2blocker*' > /tmp/cs2blocker-enable-links
+          if ! grep -q . /tmp/cs2blocker-enable-links; then
             echo "enable did not create symlinks; test is invalid" >&2
             exit 1
           fi
@@ -111,7 +112,8 @@ jobs:
             sudo systemctl list-unit-files 'cs2blocker*' --no-legend 2>/dev/null || true
             exit 1
           fi
-          if sudo find /etc/systemd/system -maxdepth 2 -type l -lname '*cs2blocker*' -print -quit | grep -q .; then
+          sudo find /etc/systemd/system -maxdepth 2 -type l -lname '*cs2blocker*' > /tmp/cs2blocker-leftover-links
+          if grep -q . /tmp/cs2blocker-leftover-links; then
             echo "systemd enablement symlink still exists" >&2
             exit 1
           fi
