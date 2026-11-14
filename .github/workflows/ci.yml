@@ -58,11 +58,13 @@ jobs:
         # The installer must refuse those, so normalize the test runner first.
         run: |
           for directory in /usr /usr/lib /usr/lib/systemd/system /usr/share \
-            /usr/share/applications /usr/share/icons/hicolor \
-            /usr/share/icons/hicolor/scalable/apps /usr/share/polkit-1/actions \
-            /usr/share/metainfo /usr/share/bash-completion/completions \
-            /usr/share/zsh/site-functions /usr/share/fish/vendor_completions.d \
-            /usr/share/man/man1; do
+            /usr/share/applications /usr/share/icons /usr/share/icons/hicolor \
+            /usr/share/icons/hicolor/scalable/apps /usr/share/polkit-1 \
+            /usr/share/polkit-1/actions /usr/share/metainfo \
+            /usr/share/bash-completion /usr/share/bash-completion/completions \
+            /usr/share/zsh /usr/share/zsh/site-functions /usr/share/fish \
+            /usr/share/fish/vendor_completions.d /usr/share/man /usr/share/man/man1 \
+            /usr/share/licenses; do
             if [[ -d "$directory" ]]; then
               sudo chmod go-w "$directory"
             fi
