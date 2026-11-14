@@ -53,6 +53,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y nftables iptables ipset
+      - name: Ensure system parent directories are safe
+        # GitHub's Ubuntu image has some world-writable /usr/share directories.
+        # The installer must refuse those, so normalize the test runner first.
+        run: |
+          for directory in /usr /usr/lib /usr/lib/systemd/system /usr/share \
+            /usr/share/applications /usr/share/icons/hicolor \
+            /usr/share/icons/hicolor/scalable/apps /usr/share/polkit-1/actions \
+            /usr/share/metainfo /usr/share/bash-completion/completions \
+            /usr/share/zsh/site-functions /usr/share/fish/vendor_completions.d \
+            /usr/share/man/man1; do
+            if [[ -d "$directory" ]]; then
+              sudo chmod go-w "$directory"
+            fi
+          done
       - name: Record system directory attributes
         run: |
           stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/polkit-1/actions \
