@@ -491,7 +491,13 @@ if [[ $ROOT == "/" ]]; then
 fi
 
 STEP="create application directories"
-install -d -m 0755 -- "$ROOT/usr/lib/cs2blocker" "$ROOT/usr/share/licenses/cs2blocker"
+install -d -m 0755 -- "$ROOT/usr/lib/cs2blocker"
+# Create the licence parent explicitly. `install -d` gives intermediate
+# components of a missing path an unsafe mode under a restrictive umask.
+if [[ ! -d "$ROOT/usr/share/licenses" ]]; then
+  install -d -m 0755 -- "$ROOT/usr/share/licenses"
+fi
+install -d -m 0755 -- "$ROOT/usr/share/licenses/cs2blocker"
 while IFS= read -r source_dir; do
   rel=${source_dir#"$STAGE"}
   install -d -m 0755 -- "$ROOT$rel"
