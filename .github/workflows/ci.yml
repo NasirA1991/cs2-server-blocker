@@ -70,16 +70,20 @@ jobs:
               sudo chmod go-w "$directory"
             fi
           done
+          # The runner image occasionally has other world-writable /usr/share
+          # directories (for example /usr/share/licenses). Normalize them all
+          # so the test exercises the installer, not image drift.
+          sudo find /usr/share -xdev -type d -perm -0002 -exec chmod go-w {} +
       - name: Record system directory attributes
         run: |
-          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/licenses /usr/share/polkit-1/actions \
             | tee /tmp/cs2blocker-dir-attrs.before
       - name: Install under restrictive umask
         run: |
           set -euo pipefail
           sudo bash -c 'umask 077; ./packaging/install.sh --skip-deps'
           test -f /usr/lib/cs2blocker/install-manifest.txt
-          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/licenses /usr/share/polkit-1/actions \
             | tee /tmp/cs2blocker-dir-attrs.after
           diff -u /tmp/cs2blocker-dir-attrs.before /tmp/cs2blocker-dir-attrs.after
       - name: Upgrade removes stale manifest files
@@ -92,7 +96,7 @@ jobs:
           sudo bash -c 'umask 077; ./packaging/install.sh --skip-deps'
           test ! -e /usr/lib/cs2blocker/old_module/x.py
           test ! -d /usr/lib/cs2blocker/old_module
-          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/licenses /usr/share/polkit-1/actions \
             | tee /tmp/cs2blocker-dir-attrs.upgrade
           diff -u /tmp/cs2blocker-dir-attrs.before /tmp/cs2blocker-dir-attrs.upgrade
       - name: Uninstall and verify cleanup
