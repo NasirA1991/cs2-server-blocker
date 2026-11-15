@@ -32,6 +32,116 @@ jobs:
       - name: Unit and integration tests
         run: python3 -m unittest discover -s tests -v
 
+  shellcheck:
+    name: shellcheck installers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Check shell scripts
+        run: shellcheck install.sh uninstall.sh packaging/install.sh packaging/uninstall.sh
+
+  installer:
+    name: Source installer round trip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install firewall tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nftables iptables ipset
+      - name: Ensure system parent directories are safe
+        # GitHub's Ubuntu image has some world-writable /usr/share directories.
+        # The installer must refuse those, so normalize the test runner first.
+        run: |
+          for directory in /usr /usr/lib /usr/lib/systemd/system /usr/share \
+            /usr/share/applications /usr/share/icons /usr/share/icons/hicolor \
+            /usr/share/icons/hicolor/scalable \
+            /usr/share/icons/hicolor/scalable/apps /usr/share/polkit-1 \
+            /usr/share/polkit-1/actions /usr/share/metainfo \
+            /usr/share/bash-completion /usr/share/bash-completion/completions \
+            /usr/share/zsh /usr/share/zsh/site-functions /usr/share/fish \
+            /usr/share/fish/vendor_completions.d /usr/share/man /usr/share/man/man1 \
+            /usr/share/licenses; do
+            if [[ -d "$directory" ]]; then
+              sudo chmod go-w "$directory"
+            fi
+          done
+          # The runner image occasionally has other world-writable /usr/share
+          # directories (for example /usr/share/licenses). Normalize them all
+          # so the test exercises the installer, not image drift.
+          sudo find /usr/share -xdev -type d -perm -0002 -exec chmod go-w {} +
+      - name: Record system directory attributes
+        run: |
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
+            | tee /tmp/cs2blocker-dir-attrs.before
+      - name: Install under restrictive umask
+        run: |
+          set -euo pipefail
+          sudo bash -c 'umask 077; ./packaging/install.sh --skip-deps'
+          test -f /usr/lib/cs2blocker/install-manifest.txt
+          test "$(stat -c '%a %U' /usr/share/licenses)" = "755 root"
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
+            | tee /tmp/cs2blocker-dir-attrs.after
+          diff -u /tmp/cs2blocker-dir-attrs.before /tmp/cs2blocker-dir-attrs.after
+      - name: Upgrade removes stale manifest files
+        run: |
+          set -euo pipefail
+          manifest=/usr/lib/cs2blocker/install-manifest.txt
+          sudo install -d -m 0755 /usr/lib/cs2blocker/old_module
+          printf 'print("old module")\n' | sudo tee /usr/lib/cs2blocker/old_module/x.py >/dev/null
+          printf '%s\n' /usr/lib/cs2blocker/old_module/x.py | sudo tee -a "$manifest" >/dev/null
+          sudo bash -c 'umask 077; ./packaging/install.sh --skip-deps'
+          test ! -e /usr/lib/cs2blocker/old_module/x.py
+          test ! -d /usr/lib/cs2blocker/old_module
+          test "$(stat -c '%a %U' /usr/share/licenses)" = "755 root"
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
+            | tee /tmp/cs2blocker-dir-attrs.upgrade
+          diff -u /tmp/cs2blocker-dir-attrs.before /tmp/cs2blocker-dir-attrs.upgrade
+      - name: Uninstall and verify cleanup
+        run: |
+          set -euo pipefail
+          manifest=/usr/lib/cs2blocker/install-manifest.txt
+          sudo cp "$manifest" /tmp/cs2blocker-manifest.txt
+          mapfile -t units < <(grep -l '^\[Install\]' packaging/systemd/* | xargs -n1 basename)
+          sudo systemctl enable "${units[@]}"
+          sudo find /etc/systemd/system -type l -lname '*cs2blocker*' > /tmp/cs2blocker-enable-links
+          if ! grep -q . /tmp/cs2blocker-enable-links; then
+            echo "enable did not create symlinks; test is invalid" >&2
+            exit 1
+          fi
+          sudo ./packaging/uninstall.sh --yes
+          test ! -e "$manifest"
+          while IFS= read -r path; do
+            test -z "$path" && continue
+            test ! -e "$path" || {
+              echo "installer left behind: $path" >&2
+              exit 1
+            }
+          done < /tmp/cs2blocker-manifest.txt
+          if sudo nft list table inet cs2blocker >/dev/null 2>&1; then
+            echo "nftables table inet cs2blocker still exists" >&2
+            exit 1
+          fi
+          if command -v iptables >/dev/null && sudo iptables -w 5 -S CS2BLOCKER >/dev/null 2>&1; then
+            echo "iptables chain CS2BLOCKER still exists" >&2
+            exit 1
+          fi
+          sudo systemctl list-unit-files 'cs2blocker*' --no-legend > /tmp/cs2blocker-leftover-units 2>/dev/null || true
+          if grep -q . /tmp/cs2blocker-leftover-units; then
+            echo "systemd still lists cs2blocker units" >&2
+            cat /tmp/cs2blocker-leftover-units >&2
+            exit 1
+          fi
+          sudo find /etc/systemd/system -maxdepth 2 -type l -lname '*cs2blocker*' > /tmp/cs2blocker-leftover-links
+          if grep -q . /tmp/cs2blocker-leftover-links; then
+            echo "systemd enablement symlink still exists" >&2
+            exit 1
+          fi
+
   gui-smoke:
     name: GUI smoke test
     runs-on: ubuntu-latest
