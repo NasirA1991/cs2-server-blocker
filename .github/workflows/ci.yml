@@ -187,6 +187,7 @@ jobs:
             chmod 440 /etc/sudoers.d/tester
             cp -a /src /tmp/repo
             chown -R tester:tester /tmp/repo
+            git config --global --add safe.directory /tmp/repo
             cd /tmp/repo
             mkdir -p /tmp/release
             git archive --format=tar.gz --prefix=cs2blocker-0.2.0/ \
