@@ -59,6 +59,7 @@ jobs:
         run: |
           for directory in /usr /usr/lib /usr/lib/systemd/system /usr/share \
             /usr/share/applications /usr/share/icons /usr/share/icons/hicolor \
+            /usr/share/icons/hicolor/scalable \
             /usr/share/icons/hicolor/scalable/apps /usr/share/polkit-1 \
             /usr/share/polkit-1/actions /usr/share/metainfo \
             /usr/share/bash-completion /usr/share/bash-completion/completions \
@@ -71,14 +72,14 @@ jobs:
           done
       - name: Record system directory attributes
         run: |
-          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/polkit-1/actions \
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
             | tee /tmp/cs2blocker-dir-attrs.before
       - name: Install under restrictive umask
         run: |
           set -euo pipefail
           sudo bash -c 'umask 077; ./packaging/install.sh --skip-deps'
           test -f /usr/lib/cs2blocker/install-manifest.txt
-          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/polkit-1/actions \
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
             | tee /tmp/cs2blocker-dir-attrs.after
           diff -u /tmp/cs2blocker-dir-attrs.before /tmp/cs2blocker-dir-attrs.after
       - name: Upgrade removes stale manifest files
@@ -91,7 +92,7 @@ jobs:
           sudo bash -c 'umask 077; ./packaging/install.sh --skip-deps'
           test ! -e /usr/lib/cs2blocker/old_module/x.py
           test ! -d /usr/lib/cs2blocker/old_module
-          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/polkit-1/actions \
+          stat -c '%a %U %n' /usr /usr/lib /usr/share /usr/share/icons/hicolor /usr/share/icons/hicolor/scalable /usr/share/polkit-1/actions \
             | tee /tmp/cs2blocker-dir-attrs.upgrade
           diff -u /tmp/cs2blocker-dir-attrs.before /tmp/cs2blocker-dir-attrs.upgrade
       - name: Uninstall and verify cleanup
