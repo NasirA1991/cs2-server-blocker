@@ -94,6 +94,31 @@ sandboxed root service.
 
 ## Install
 
+### Quick install (any distro)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NasirA1991/cs2-server-blocker/master/get.sh | bash
+```
+
+Prefer to read it first:
+
+```bash
+curl -fsSLo get.sh https://raw.githubusercontent.com/NasirA1991/cs2-server-blocker/master/get.sh
+less get.sh
+bash get.sh
+```
+
+`get.sh` detects the distribution and chooses the native method: an AUR helper
+(or `makepkg`) on Arch-based systems, the `.deb` package on Debian/Ubuntu/Mint,
+the `.rpm` package on Fedora/RHEL-compatible systems, and the source tarball
+elsewhere. It verifies every release download against the release `SHA256SUMS` before
+extracting or running it, uses `sudo` only for the package/installer step, and
+never enables or starts a service. It supports `--method`, `--version`,
+`--uninstall`, `--yes` and `--dry-run`; `--user` is not supported because the
+application needs the root helper and polkit action.
+
+### Package manager installation
+
 All release artifacts are built by GitHub Actions and published on the
 [latest release](https://github.com/NasirA1991/cs2-server-blocker/releases/latest):
 

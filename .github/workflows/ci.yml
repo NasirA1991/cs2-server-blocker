@@ -133,3 +133,93 @@ jobs:
         with:
           name: arch-package
           path: packaging/cs2blocker-*.pkg.tar.zst
+
+  get-sh-shellcheck:
+    name: get.sh shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: >-
+          docker run --rm -v "$PWD":/mnt -w /mnt
+          koalaman/shellcheck:stable get.sh
+
+  get-sh-dry-run:
+    name: get.sh dry-run (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            image: ubuntu:24.04
+            expected: "Method: .deb package"
+          - distro: fedora
+            image: fedora:41
+            expected: "Method: .rpm package"
+          - distro: arch
+            image: archlinux:latest
+            expected: "Method: AUR"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect the expected method in ${{ matrix.distro }}
+        run: |
+          set -euo pipefail
+          docker run --rm --user 1000:1000 -v "$PWD":/src -w /src "${{ matrix.image }}" \
+            bash -lc 'bash ./get.sh --dry-run --yes' | tee "get-sh-${{ matrix.distro }}.out"
+          grep -F '${{ matrix.expected }}' "get-sh-${{ matrix.distro }}.out"
+
+  get-sh-integration:
+    name: get.sh source install/uninstall
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify a fake release end to end in Ubuntu
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash -lc '
+            set -euo pipefail
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              ca-certificates curl git nftables iptables ipset python3 sudo tar util-linux
+            useradd -m tester
+            printf "tester ALL=(ALL) NOPASSWD:ALL\n" >/etc/sudoers.d/tester
+            chmod 440 /etc/sudoers.d/tester
+            cp -a /src /tmp/repo
+            chown -R tester:tester /tmp/repo
+            cd /tmp/repo
+            mkdir -p /tmp/release
+            git archive --format=tar.gz --prefix=cs2blocker-0.2.0/ \
+              -o /tmp/release/cs2blocker-0.2.0.tar.gz HEAD
+            (cd /tmp/release && sha256sum cs2blocker-0.2.0.tar.gz > SHA256SUMS)
+            python3 -m http.server 8000 --directory /tmp/release >/tmp/http.log 2>&1 &
+            server_pid=$!
+            trap "kill $server_pid 2>/dev/null || true" EXIT
+            sleep 1
+            runuser -u tester -- env HOME=/home/tester XDG_STATE_HOME=/home/tester/.local/state \
+              GET_SH_BASE_URL=http://127.0.0.1:8000 \
+              bash -lc "cd /tmp/repo && ./get.sh --method source --version v0.2.0 --yes"
+            test -x /usr/bin/cs2blocker-gui
+            runuser -u tester -- env HOME=/home/tester XDG_STATE_HOME=/home/tester/.local/state \
+              GET_SH_BASE_URL=http://127.0.0.1:8000 \
+              bash -lc "cd /tmp/repo && ./get.sh --uninstall --yes"
+            test ! -e /usr/bin/cs2blocker-gui
+
+            mkdir -p /tmp/release-bad
+            cp /tmp/release/cs2blocker-0.2.0.tar.gz /tmp/release-bad/
+            cp /tmp/release/SHA256SUMS /tmp/release-bad/
+            printf "corrupt\n" >> /tmp/release-bad/cs2blocker-0.2.0.tar.gz
+            python3 -m http.server 8001 --directory /tmp/release-bad >/tmp/http-bad.log 2>&1 &
+            bad_pid=$!
+            trap "kill $server_pid $bad_pid 2>/dev/null || true" EXIT
+            sleep 1
+            if runuser -u tester -- env HOME=/home/tester XDG_STATE_HOME=/home/tester/.local/state \
+              GET_SH_BASE_URL=http://127.0.0.1:8001 \
+              bash -lc "cd /tmp/repo && ./get.sh --method source --version v0.2.0 --yes" \
+              >/tmp/get-sh-bad.out 2>/tmp/get-sh-bad.err; then
+              echo "corrupted download unexpectedly succeeded" >&2
+              exit 1
+            fi
+            grep -qi "checksum mismatch" /tmp/get-sh-bad.err
+            test ! -e /usr/bin/cs2blocker-gui
+          '
